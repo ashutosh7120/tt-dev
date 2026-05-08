@@ -25,10 +25,10 @@
   if (typeof window === 'undefined') return
 
   const SNIPPET_ID = 'jrva2hec'
-  const ROOT_SELECTOR = '.sai-' + SNIPPET_ID
-  const TRACK_SELECTOR = '.sai-' + SNIPPET_ID + '__track'
-  const VIEWPORT_SELECTOR = '.sai-' + SNIPPET_ID + '__viewport'
-  const COPY_SELECTOR = '.sai-' + SNIPPET_ID + '__track-copy'
+  const ROOT_SELECTOR = `.sai-${SNIPPET_ID}`
+  const TRACK_SELECTOR = `.sai-${SNIPPET_ID}__track`
+  const VIEWPORT_SELECTOR = `.sai-${SNIPPET_ID}__viewport`
+  const COPY_SELECTOR = `.sai-${SNIPPET_ID}__track-copy`
   const SCROLL_BEHAVIOURS = new Set(['static', 'sticky', 'show_on_scroll_up'])
   const SCROLL_HIDE_THRESHOLD_PX = 16
 
@@ -86,25 +86,28 @@
       track.setAttribute('data-pause-on-hover', v)
     }
 
-    if (typeof content.scroll_behaviour === 'string' && SCROLL_BEHAVIOURS.has(content.scroll_behaviour)) {
+    if (
+      typeof content.scroll_behaviour === 'string' &&
+      SCROLL_BEHAVIOURS.has(content.scroll_behaviour)
+    ) {
       root.setAttribute('data-scroll-behaviour', content.scroll_behaviour)
-      root.classList.remove('sai-' + SNIPPET_ID + '--scroll-static')
-      root.classList.remove('sai-' + SNIPPET_ID + '--scroll-sticky')
-      root.classList.remove('sai-' + SNIPPET_ID + '--scroll-show-up')
+      root.classList.remove(`sai-${SNIPPET_ID}--scroll-static`)
+      root.classList.remove(`sai-${SNIPPET_ID}--scroll-sticky`)
+      root.classList.remove(`sai-${SNIPPET_ID}--scroll-show-up`)
       const cls =
         content.scroll_behaviour === 'show_on_scroll_up'
-          ? 'sai-' + SNIPPET_ID + '--scroll-show-up'
-          : 'sai-' + SNIPPET_ID + '--scroll-' + content.scroll_behaviour
+          ? `sai-${SNIPPET_ID}--scroll-show-up`
+          : `sai-${SNIPPET_ID}--scroll-${content.scroll_behaviour}`
       root.classList.add(cls)
     }
 
     if (typeof content.asset_object_fit === 'string') {
-      const assets = node.querySelectorAll('.sai-' + SNIPPET_ID + '__asset')
+      const assets = node.querySelectorAll(`.sai-${SNIPPET_ID}__asset`)
       for (const a of assets) a.setAttribute('data-object-fit', content.asset_object_fit)
     }
 
     if (typeof content.asset_loop === 'boolean') {
-      const videos = node.querySelectorAll('.sai-' + SNIPPET_ID + '__asset')
+      const videos = node.querySelectorAll(`.sai-${SNIPPET_ID}__asset`)
       for (const v of videos) {
         if (v.tagName === 'VIDEO') {
           if (content.asset_loop) v.setAttribute('loop', '')
@@ -145,9 +148,9 @@
         ? window.matchMedia('(prefers-reduced-motion: reduce)')
         : null
 
-    let track_ = track
-    let viewport_ = viewport
-    let firstCopy_ = firstCopy
+    const track_ = track
+    const viewport_ = viewport
+    const firstCopy_ = firstCopy
 
     // When the natural slide content is shorter than the viewport, the
     // duplicate-track marquee would scroll empty space between cycles.
@@ -179,12 +182,12 @@
     fillCopiesToViewport()
 
     function setDuration() {
-      if (reducedMotion && reducedMotion.matches) return
+      if (reducedMotion?.matches) return
       const copyWidth = firstCopy_.getBoundingClientRect().width
       const viewportWidth = viewport_.getBoundingClientRect().width
       const duration = computeDuration(tickerSeconds, copyWidth, viewportWidth)
       if (duration === null) return
-      track_.style.setProperty('--sai-' + SNIPPET_ID + '-duration', duration + 's')
+      track_.style.setProperty(`--sai-${SNIPPET_ID}-duration`, `${duration}s`)
     }
     setDuration()
 
@@ -198,8 +201,8 @@
     }
 
     const onMotionChange = () => {
-      if (reducedMotion && reducedMotion.matches) {
-        track_.style.setProperty('--sai-' + SNIPPET_ID + '-duration', '0s')
+      if (reducedMotion?.matches) {
+        track_.style.setProperty(`--sai-${SNIPPET_ID}-duration`, '0s')
       } else {
         setDuration()
       }
@@ -209,9 +212,7 @@
     }
     onMotionChange()
 
-    const trackHandle = snippetApi && typeof snippetApi.bind === 'function'
-      ? snippetApi
-      : null
+    const trackHandle = snippetApi && typeof snippetApi.bind === 'function' ? snippetApi : null
 
     let getTrack = null
     function fireAnalytics(eventName, payload) {
@@ -257,7 +258,7 @@
       // Push page content down so the bar doesn't overlap the header.
       function syncBodyVar() {
         const h = root.getBoundingClientRect().height
-        document.body.style.setProperty('--sai-announcement-bar-height', h + 'px')
+        document.body.style.setProperty('--sai-announcement-bar-height', `${h}px`)
       }
       syncBodyVar()
       let bodyResizeObserver = null
@@ -277,7 +278,7 @@
     if (scrollBehaviour === 'show_on_scroll_up') {
       let lastY = window.scrollY || 0
       let raf = 0
-      const hiddenClass = 'sai-' + SNIPPET_ID + '--hidden'
+      const hiddenClass = `sai-${SNIPPET_ID}--hidden`
       const onScroll = () => {
         if (raf) return
         raf = requestAnimationFrame(() => {
@@ -305,7 +306,7 @@
     function onClick(event) {
       const target = event.target instanceof Element ? event.target : null
       if (!target) return
-      const slideEl = target.closest('.sai-' + SNIPPET_ID + '__slide')
+      const slideEl = target.closest(`.sai-${SNIPPET_ID}__slide`)
       if (!slideEl || !node.contains(slideEl)) return
       const idx = Number(slideEl.getAttribute('data-slide-index') || '0')
       const href = slideEl.getAttribute('href') || ''
@@ -336,7 +337,7 @@
         },
         { threshold: [0, 0.5, 1], root: viewport_ },
       )
-      const slidesToObserve = firstCopy_.querySelectorAll('.sai-' + SNIPPET_ID + '__slide')
+      const slidesToObserve = firstCopy_.querySelectorAll(`.sai-${SNIPPET_ID}__slide`)
       for (const s of slidesToObserve) intersectionObserver.observe(s)
     }
 
@@ -363,9 +364,9 @@
 
   function init() {
     const containers = document.querySelectorAll(
-      '[data-spectrum-instance-id][data-spectrum-snippet-id="' + SNIPPET_ID + '"]',
+      `[data-spectrum-instance-id][data-spectrum-snippet-id="${SNIPPET_ID}"]`,
     )
-    const snippetApi = window.__spectrumAi && window.__spectrumAi.snippet
+    const snippetApi = window.__spectrumAi?.snippet
 
     for (const node of containers) {
       const handle = activateContainer(node, snippetApi)

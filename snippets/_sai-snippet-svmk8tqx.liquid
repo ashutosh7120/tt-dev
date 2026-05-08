@@ -170,11 +170,28 @@
       {%- if entry.poster_image.value != blank -%}
         {%- assign poster_url = entry.poster_image.value | image_url: width: 600 -%}
       {%- endif -%}
+      {%- assign preview_url = '' -%}
+      {%- assign preview_file = entry.preview_video.value -%}
+      {%- if preview_file != blank -%}
+        {%- if preview_file.sources != blank -%}
+          {%- for source in preview_file.sources -%}
+            {%- if source.format == 'mp4' and preview_url == '' -%}
+              {%- assign preview_url = source.url -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if preview_url == '' -%}
+            {%- assign preview_url = preview_file.sources.first.url -%}
+          {%- endif -%}
+        {%- elsif preview_file.url != blank -%}
+          {%- assign preview_url = preview_file.url -%}
+        {%- endif -%}
+      {%- endif -%}
 
       {{ handle | json }}:{
         "title":{{ entry.title | default: 'Video' | json }},
         "video_url":{{ video_url | json }},
         "poster_url":{{ poster_url | json }},
+        "preview_url":{{ preview_url | json }},
         "product_tags":[
           {%- comment -%}
             Gate on `!= blank` to mirror the original SSR dialog-slides loop.
