@@ -181,6 +181,11 @@
     }
     fillCopiesToViewport()
 
+    // Mark the host ready so CSS can start the animation. Without this gate,
+    // the marquee runs from T=0 against the natural-width SSR track and
+    // visibly snaps when fillCopiesToViewport widens it.
+    root.setAttribute('data-ready', 'true')
+
     function setDuration() {
       if (reducedMotion?.matches) return
       const copyWidth = firstCopy_.getBoundingClientRect().width
@@ -255,10 +260,15 @@
     let bodyPaddingCleanup = () => {}
 
     if (scrollBehaviour === 'sticky' || scrollBehaviour === 'show_on_scroll_up') {
-      // Push page content down so the bar doesn't overlap the header.
+      // Push page content down so the fixed/sticky bar doesn't overlap the
+      // header. Snippet static CSS may not target global `body` (per snippet
+      // conventions), so we apply both the CSS var (for theme code that wants
+      // to consume it) and the actual padding directly here.
+      const priorPadding = document.body.style.paddingTop
       function syncBodyVar() {
         const h = root.getBoundingClientRect().height
         document.body.style.setProperty('--sai-announcement-bar-height', `${h}px`)
+        document.body.style.paddingTop = `${h}px`
       }
       syncBodyVar()
       let bodyResizeObserver = null
@@ -272,6 +282,7 @@
         if (bodyResizeObserver) bodyResizeObserver.disconnect()
         else window.removeEventListener('resize', syncBodyVar)
         document.body.style.removeProperty('--sai-announcement-bar-height')
+        document.body.style.paddingTop = priorPadding
       }
     }
 
