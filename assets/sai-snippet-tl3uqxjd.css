@@ -78,6 +78,15 @@
   justify-content: space-between;
 }
 
+/* When chevrons are enabled, reserve room on each side of the slide so
+ * space-between'd content (asset on the left, actions on the right) doesn't
+ * collide with the absolutely-positioned chevron buttons (28px @ 8px from
+ * the edge). */
+.sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"]) .sai-tl3uqxjd__slide {
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
 /* Single-zone-only — give the lone child a comfortable max width so it
  * doesn't get squashed against the bar edges. */
 .sai-tl3uqxjd__slide:not(.sai-tl3uqxjd__slide--has-asset):not(.sai-tl3uqxjd__slide--has-titles) {
