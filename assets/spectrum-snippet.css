@@ -1978,6 +1978,12 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   right: 8px;
 }
 
+/* Dismissable adds a top-right close button. Slide the next chevron inward
+ * so the two don't share the same patch of pixels on short bars. */
+.sai-tl3uqxjd[data-dismissable="true"] .sai-tl3uqxjd__chev--next {
+  right: 44px;
+}
+
 .sai-tl3uqxjd__chev:hover {
   background: rgba(0, 0, 0, 0.4);
 }
@@ -1991,8 +1997,9 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 .sai-tl3uqxjd__close {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
   width: 28px;
   height: 28px;
   padding: 0;
@@ -2005,6 +2012,9 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   cursor: pointer;
   border-radius: 50%;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sai-tl3uqxjd__close:hover {
