@@ -1664,7 +1664,11 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  /* `--sai-tl3uqxjd-slide-pad-bottom` defaults to the symmetric 0.75rem
+   * (matches top padding). When dots are visible the host class bumps it
+   * to 1.5rem so the absolutely-positioned dots have breathing room
+   * beneath the slide content. */
+  padding: 0.75rem 1rem var(--sai-tl3uqxjd-slide-pad-bottom, 0.75rem);
   min-height: 48px;
   background: var(--sai-slide-bg, #ffffff);
   text-decoration: none;
@@ -1673,6 +1677,11 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   box-sizing: border-box;
   transition: opacity var(--sai-tl3uqxjd-transition-duration, 400ms) ease, transform
     var(--sai-tl3uqxjd-transition-duration, 400ms) ease;
+}
+
+/* Dots visible (multi-slide AND nav_mode != auto_only) → reserve room. */
+.sai-tl3uqxjd:not(.sai-tl3uqxjd--single):not([data-nav-mode="auto_only"]) {
+  --sai-tl3uqxjd-slide-pad-bottom: 1.5rem;
 }
 
 /* Layout-collapse matrix — only the "all 3 zones" case spreads the
