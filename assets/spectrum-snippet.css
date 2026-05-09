@@ -1997,9 +1997,8 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 .sai-tl3uqxjd__close {
   position: absolute;
-  top: 50%;
-  right: 8px;
-  transform: translateY(-50%);
+  top: 4px;
+  right: 4px;
   width: 28px;
   height: 28px;
   padding: 0;
@@ -2012,9 +2011,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   cursor: pointer;
   border-radius: 50%;
   z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .sai-tl3uqxjd__close:hover {
