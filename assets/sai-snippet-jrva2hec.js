@@ -11,28 +11,8 @@
  * speed stays constant regardless of total slide width) and pauses on
  * gesture / focus / reduced-motion.
  *
- * applyVariant updates DOM attributes and classes for bar-level scalars on
- * every variant resolution. Downstream effects vary:
- *
- *   - `ticker_seconds`     → updates `data-ticker-seconds`; setDuration()
- *                            re-reads the attribute on each invocation, and
- *                            the bind callback calls it after applyVariant
- *                            so the marquee speed picks up the new value.
- *   - `asset_object_fit`   → updates the `data-object-fit` attribute on
- *                            every asset; CSS reads it live.
- *   - `asset_loop`         → toggles the `loop` attribute on <video>; live.
- *   - `pause_on_hover`     → updates the `data-pause-on-hover` attribute,
- *                            so CSS hover-pause responds live. The focus /
- *                            touch listeners however are wired once at init
- *                            based on the initial value — flipping this at
- *                            runtime won't add or remove those listeners.
- *   - `scroll_behaviour`   → swaps the host's CSS modifier class. The body
- *                            CSS-var setter and the show-on-scroll-up
- *                            scroll listener are wired once at init based
- *                            on the initial mode — switching modes at
- *                            runtime won't reconfigure them. Page reload
- *                            required to fully change modes.
- *
+ * applyVariant only mutates BAR-LEVEL scalars at runtime: `ticker_seconds`,
+ * `pause_on_hover`, `scroll_behaviour`, `asset_object_fit`, `asset_loop`.
  * Slide content (the JSON array) is server-rendered and not mutable here —
  * a variant rule that changes slide text or assets requires a fresh page
  * render.
@@ -42,6 +22,8 @@
  * extractScrollDirection }` for unit tests.
  */
 ;(() => {
+  if (typeof window === 'undefined') return
+
   const SNIPPET_ID = 'jrva2hec'
   const ROOT_SELECTOR = `.sai-${SNIPPET_ID}`
   const TRACK_SELECTOR = `.sai-${SNIPPET_ID}__track`
@@ -157,9 +139,7 @@
     const firstCopy = node.querySelector(COPY_SELECTOR)
     if (!root || !track || !viewport || !firstCopy) return () => {}
 
-    // pauseOnHover and scrollBehaviour are captured once at init — see the
-    // module docstring for the runtime-mutation contract. tickerSeconds is
-    // re-read live inside setDuration so applyVariant can update speed.
+    const tickerSeconds = readNumberAttr(root, 'data-ticker-seconds', 30)
     const pauseOnHover = readBoolAttr(root, 'data-pause-on-hover', true)
     const scrollBehaviour = root.getAttribute('data-scroll-behaviour') || 'static'
 
@@ -203,33 +183,21 @@
 
     function setDuration() {
       if (reducedMotion?.matches) return
-      // Re-read each call so applyVariant's data-ticker-seconds update is
-      // picked up without needing to thread state.
-      const tickerSeconds = readNumberAttr(root, 'data-ticker-seconds', 30)
       const copyWidth = firstCopy_.getBoundingClientRect().width
       const viewportWidth = viewport_.getBoundingClientRect().width
       const duration = computeDuration(tickerSeconds, copyWidth, viewportWidth)
       if (duration === null) return
       track_.style.setProperty(`--sai-${SNIPPET_ID}-duration`, `${duration}s`)
     }
-
-    // On viewport widen (browser resize, mobile rotate, devtools toggle), an
-    // earlier copy that was wide enough may now expose blank space at -50%.
-    // Re-fill before recomputing duration so the marquee never animates over
-    // an under-wide track.
-    function onResize() {
-      fillCopiesToViewport()
-      setDuration()
-    }
     setDuration()
 
     let resizeObserver = null
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(onResize)
+      resizeObserver = new ResizeObserver(() => setDuration())
       resizeObserver.observe(firstCopy_)
       resizeObserver.observe(viewport_)
     } else {
-      window.addEventListener('resize', onResize)
+      window.addEventListener('resize', setDuration)
     }
 
     const onMotionChange = () => {
@@ -243,6 +211,8 @@
       reducedMotion.addEventListener('change', onMotionChange)
     }
     onMotionChange()
+
+    const trackHandle = snippetApi && typeof snippetApi.bind === 'function' ? snippetApi : null
 
     let getTrack = null
     function fireAnalytics(eventName, payload) {
@@ -373,7 +343,7 @@
 
     function teardown() {
       if (resizeObserver) resizeObserver.disconnect()
-      else window.removeEventListener('resize', onResize)
+      else window.removeEventListener('resize', setDuration)
       if (reducedMotion && typeof reducedMotion.removeEventListener === 'function') {
         reducedMotion.removeEventListener('change', onMotionChange)
       }
@@ -389,10 +359,6 @@
       setTrackHandle: (track) => {
         getTrack = track
       },
-      // Re-compute marquee duration. Called by the bind callback after
-      // applyVariant updates `data-ticker-seconds` so the new speed takes
-      // effect without a page reload.
-      refreshDuration: setDuration,
     }
   }
 
@@ -413,10 +379,6 @@
           const variant = variants.find((v) => v.variantId === currentVariantId)
           if (!variant || !variant.content) return
           applyVariant(node, variant.content)
-          // applyVariant only updates the data attribute; setDuration reads
-          // it live, so re-running here lets `ticker_seconds` changes take
-          // effect on variant switch without a page reload.
-          handle.refreshDuration()
         })
         if (bound && typeof bound.track === 'function') {
           handle.setTrackHandle(bound.track)

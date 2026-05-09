@@ -22,29 +22,21 @@
   Slide field semantics:
     - title_text         string   Inline HTML allowed; rendered without
                                   | escape. Same trust boundary as theme
-                                  settings — merchants can author rich
-                                  text including <strong>/<em>/<a>.
+                                  settings.
     - asset_url          string   CDN URL string. Render branches on the
-                                  real file extension (path-stripped of
-                                  query string and hash, last dot-segment):
-                                  mp4 / webm / mov produce <video>;
-                                  everything else produces <img>. Emitted
-                                  through | escape into HTML attributes.
+                                  extension: .mp4 / .webm / .mov produce
+                                  <video>; everything else produces <img>.
                                   Slides with empty asset_url AND empty
                                   title_text are skipped.
     - asset_position     string   'leading' | 'trailing' | 'background'.
                                   Drives a CSS modifier on the slide. Falls
                                   back to 'leading' when missing/invalid.
     - background_color   string   Hex / CSS colour. Becomes inline
-                                  --sai-slide-bg on the slide wrapper,
-                                  emitted through | escape. Falls back to
-                                  transparent.
+                                  --sai-slide-bg on the slide wrapper.
+                                  Falls back to transparent.
     - redirect_url       string   Optional. The slide is always emitted as
                                   <a>; href is set only when present
-                                  (element-stability rule). Schemes are
-                                  restricted to http/https/mailto/tel and
-                                  relative URLs — javascript:/data:/etc.
-                                  are dropped to prevent click XSS.
+                                  (element-stability rule).
 
   Seamless loop technique: the inner track contains TWO copies of the slide
   list. CSS animates the track from translateX(0) to translateX(-50%). At
@@ -75,22 +67,7 @@
 {%- if scroll_behaviour != 'static' and scroll_behaviour != 'sticky' and scroll_behaviour != 'show_on_scroll_up' -%}
   {%- assign scroll_behaviour = 'static' -%}
 {%- endif -%}
-
-{%- comment -%}
-  Map the prop value to the CSS class suffix. CSS uses `--scroll-show-up`
-  (hyphenated) and the JS `applyVariant` adds the same hyphenated form;
-  emitting the raw underscored value here would yield a class with no
-  matching CSS rule and the bar would render unpositioned on initial load.
-{%- endcomment -%}
-{%- assign scroll_class = scroll_behaviour -%}
-{%- if scroll_behaviour == 'show_on_scroll_up' -%}
-  {%- assign scroll_class = 'show-up' -%}
-{%- endif -%}
-
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
-{%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
-  {%- assign asset_object_fit = 'cover' -%}
-{%- endif -%}
 
 {%- comment -%}── Capture the slide list once; emit twice for the seamless loop. ──{%- endcomment -%}
 {%- assign rendered_count = 0 -%}
@@ -108,15 +85,12 @@
       {%- assign rendered_count = rendered_count | plus: 1 -%}
 
       {%- comment -%}
-        Asset render branch — extract the real file extension before
-        deciding video vs img. A bare `contains` substring match misroutes
-        URLs whose query string or path incidentally contains '.mp4' /
-        '.webm' / '.mov' (e.g. `cdn.example.com/foo.jpg?ref=video.mp4`).
+        Asset render branch — URL extension decides video vs img. Per
+        generated-liquid.md rule 3, `contains` is only valid inside if
+        blocks, never inside output expressions.
       {%- endcomment -%}
-      {%- assign asset_path = asset_url | split: '?' | first | split: '#' | first -%}
-      {%- assign asset_ext = asset_path | split: '.' | last | downcase -%}
       {%- assign is_video = false -%}
-      {%- if asset_ext == 'mp4' or asset_ext == 'webm' or asset_ext == 'mov' -%}
+      {%- if asset_url contains '.mp4' or asset_url contains '.webm' or asset_url contains '.mov' -%}
         {%- assign is_video = true -%}
       {%- endif -%}
 
@@ -128,38 +102,20 @@
       {%- assign slide_bg = slide.background_color | default: 'transparent' -%}
       {%- assign slide_index = forloop.index0 -%}
 
-      {%- comment -%}
-        Drop unsafe URL schemes from `redirect_url`. Anything not http(s),
-        mailto, tel, or relative is replaced with a no-op fragment so a
-        malicious or accidental `javascript:` value can't become a click
-        XSS vector. The check is on the literal scheme prefix (text before
-        the first `:`); relative URLs have no colon and pass through.
-      {%- endcomment -%}
-      {%- assign redirect_safe = '' -%}
-      {%- if slide.redirect_url != blank -%}
-        {%- assign redirect_lower = slide.redirect_url | strip | downcase -%}
-        {%- assign redirect_scheme = redirect_lower | split: ':' | first -%}
-        {%- if redirect_lower == redirect_scheme -%}
-          {%- assign redirect_safe = slide.redirect_url -%}
-        {%- elsif redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
-          {%- assign redirect_safe = slide.redirect_url -%}
-        {%- endif -%}
-      {%- endif -%}
-
       <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-{{ asset_position }}"
          data-slide-index="{{ slide_index }}"
-         {%- if redirect_safe != '' %} href="{{ redirect_safe | escape }}"{% else %} aria-disabled="true"{% endif %}
-         style="--sai-slide-bg: {{ slide_bg | escape }};">
+         {%- if slide.redirect_url != blank %} href="{{ slide.redirect_url }}"{% else %} aria-disabled="true"{% endif %}
+         style="--sai-slide-bg: {{ slide_bg }};">
         {%- if asset_url != '' -%}
           {%- if is_video -%}
             <video class="sai-jrva2hec__asset"
-                   src="{{ asset_url | escape }}"
+                   src="{{ asset_url }}"
                    autoplay muted playsinline
                    {%- if asset_loop %} loop{% endif %}
                    data-object-fit="{{ asset_object_fit }}"></video>
           {%- else -%}
             <img class="sai-jrva2hec__asset"
-                 src="{{ asset_url | escape }}"
+                 src="{{ asset_url }}"
                  loading="lazy"
                  data-object-fit="{{ asset_object_fit }}"
                  alt="{{ title_text | strip_html | escape | truncate: 80 }}">
@@ -173,7 +129,7 @@
 
 {%- if rendered_count > 0 -%}
 <sai-jrva2hec
-  class="sai-jrva2hec sai-jrva2hec--scroll-{{ scroll_class }}"
+  class="sai-jrva2hec sai-jrva2hec--scroll-{{ scroll_behaviour }}"
   data-ticker-seconds="{{ ticker_seconds }}"
   data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}"
   data-scroll-behaviour="{{ scroll_behaviour }}"
