@@ -702,6 +702,14 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   background-color: var(--sai-color-bg);
   color: var(--sai-color-fg);
   font-family: var(--sai-font-body);
+  /* Hidden until JS finishes fillCopiesToViewport so the under-wide SSR
+     track (slides clustered with empty trailing space) is never visible.
+     Layout space is still reserved (height intact) so nothing below jumps. */
+  visibility: hidden;
+}
+
+.sai-jrva2hec[data-ready="true"] {
+  visibility: visible;
 }
 
 .sai-jrva2hec *,
