@@ -181,11 +181,6 @@
     }
     fillCopiesToViewport()
 
-    // Mark the host ready so CSS can start the animation. Without this gate,
-    // the marquee runs from T=0 against the natural-width SSR track and
-    // visibly snaps when fillCopiesToViewport widens it.
-    root.setAttribute('data-ready', 'true')
-
     function setDuration() {
       if (reducedMotion?.matches) return
       const copyWidth = firstCopy_.getBoundingClientRect().width
