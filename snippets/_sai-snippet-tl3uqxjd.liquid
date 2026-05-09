@@ -118,11 +118,6 @@
   {%- assign scroll_behaviour = 'static' -%}
 {%- endif -%}
 
-{%- assign asset_size = content.asset_size | default: 'thumbnail' -%}
-{%- if asset_size != 'thumbnail' and asset_size != 'full_width' -%}
-  {%- assign asset_size = 'thumbnail' -%}
-{%- endif -%}
-
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
 {%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
   {%- assign asset_object_fit = 'cover' -%}
@@ -139,6 +134,10 @@
     {%- for slide in content.slides -%}
       {%- assign asset_url = slide.asset_url | default: '' -%}
       {%- assign asset_url_lower = asset_url | downcase -%}
+      {%- assign slide_asset_size = slide.asset_size | default: 'thumbnail' -%}
+      {%- if slide_asset_size != 'thumbnail' and slide_asset_size != 'full_width' -%}
+        {%- assign slide_asset_size = 'thumbnail' -%}
+      {%- endif -%}
       {%- assign title_1 = slide.title_1_text | default: '' -%}
       {%- assign title_2 = slide.title_2_text | default: '' -%}
       {%- assign cta_type = slide.cta_type | default: 'redirect' -%}
@@ -236,6 +235,7 @@
       {%- if has_cta -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-cta' -%}{%- endif -%}
       {%- if timer_end != '' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-timer' -%}{%- endif -%}
       {%- if has_actions -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-actions' -%}{%- endif -%}
+      {%- if slide_asset_size == 'full_width' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--asset-full-width' -%}{%- endif -%}
 
       {%- comment -%}
         Default to opaque white when missing / transparent / non-hex. A solid
@@ -373,7 +373,6 @@
   data-swipe-enabled="{% if swipe_enabled %}true{% else %}false{% endif %}"
   data-dismissable="{% if dismissable %}true{% else %}false{% endif %}"
   data-scroll-behaviour="{{ scroll_behaviour }}"
-  data-asset-size="{{ asset_size }}"
   data-asset-object-fit="{{ asset_object_fit }}"
   data-asset-loop="{% if asset_loop %}true{% else %}false{% endif %}"
   data-promo-copied-text="{{ promo_copied_text | escape }}"

@@ -702,6 +702,14 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   background-color: var(--sai-color-bg);
   color: var(--sai-color-fg);
   font-family: var(--sai-font-body);
+  /* Hidden until JS finishes fillCopiesToViewport so the under-wide SSR
+     track (slides clustered with empty trailing space) is never visible.
+     Layout space is still reserved (height intact) so nothing below jumps. */
+  visibility: hidden;
+}
+
+.sai-jrva2hec[data-ready="true"] {
+  visibility: visible;
 }
 
 .sai-jrva2hec *,
@@ -750,18 +758,7 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   flex-wrap: nowrap;
   width: max-content;
   animation: sai-jrva2hec-marquee var(--sai-jrva2hec-duration) linear infinite;
-  /* Paused until JS computes the duration via setDuration(). The default
-     --sai-jrva2hec-duration is for a viewport-width track; with our SSR
-     multiplier the actual track is wider, so running the animation at the
-     default value would scroll at the wrong (faster) speed and then snap
-     back to the start when JS sets the correct duration. JS flips the
-     host's data-ready attribute once setDuration completes. */
-  animation-play-state: paused;
   will-change: transform;
-}
-
-.sai-jrva2hec[data-ready="true"] .sai-jrva2hec__track {
-  animation-play-state: running;
 }
 
 /* Slides pack tightly within each copy at their natural width. JS clones
@@ -1918,34 +1915,34 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   object-fit: none;
 }
 
-/* Full-width asset mode — banner-style, asset spans the entire bar.
- * Drops the 80px thumbnail cap, removes slide padding, and stretches the
- * asset to fill the slide. Slide height is capped to a sensible banner
- * default (60px) so a 1080p video doesn't blow the page out; merchants
- * who want a taller banner override `.sai-tl3uqxjd__slide` height via
- * the Slide style node. */
-.sai-tl3uqxjd[data-asset-size="full_width"] .sai-tl3uqxjd__slide {
+/* Full-width asset mode (per-slide) — banner-style, asset spans the entire
+ * bar. Drops the 80px thumbnail cap, removes slide padding, and stretches
+ * the asset to fill the slide. Slide height is capped to a sensible banner
+ * default (60px) so a 1080p video doesn't blow the page out. Each slide
+ * opts in independently via `slide.asset_size = 'full_width'`, so a
+ * carousel can mix banner slides with thumbnail slides. */
+.sai-tl3uqxjd__slide--asset-full-width {
   padding: 0;
   min-height: 60px;
   height: 60px;
 }
-.sai-tl3uqxjd[data-asset-size="full_width"] .sai-tl3uqxjd__zone-asset {
+.sai-tl3uqxjd__slide--asset-full-width .sai-tl3uqxjd__zone-asset {
   flex: 1 1 auto;
   max-width: none;
   width: 100%;
   height: 100%;
 }
-.sai-tl3uqxjd[data-asset-size="full_width"] .sai-tl3uqxjd__asset {
+.sai-tl3uqxjd__slide--asset-full-width .sai-tl3uqxjd__asset {
   max-width: 100%;
   max-height: 100%;
   width: 100%;
   height: 100%;
 }
 
-/* Override chevron side-padding when in full-width mode — the asset must
- * span edge-to-edge regardless of chevron presence. Same selector-shape
- * as the chevron rule plus the asset-size attr to win specificity. */
-.sai-tl3uqxjd[data-asset-size="full_width"][data-chevrons-enabled="true"]:not([data-single-slide="true"]) .sai-tl3uqxjd__slide {
+/* Override chevron side-padding for full-width slides — the asset must
+ * span edge-to-edge regardless of chevron presence. Specificity is bumped
+ * past the host-level chevron rule via the extra `:not()` predicate. */
+.sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"]) .sai-tl3uqxjd__slide--asset-full-width {
   padding-left: 0;
   padding-right: 0;
 }
