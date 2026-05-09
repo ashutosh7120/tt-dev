@@ -305,10 +305,14 @@
 
 /* Full-width asset mode — banner-style, asset spans the entire bar.
  * Drops the 80px thumbnail cap, removes slide padding, and stretches the
- * asset to fill the slide. Use when slides are asset-only (e.g., a video
- * background); titles/CTAs still render but layer on top of the media. */
+ * asset to fill the slide. Slide height is capped to a sensible banner
+ * default (60px) so a 1080p video doesn't blow the page out; merchants who
+ * want a taller banner override `.sai-tl3uqxjd__slide` height via the
+ * Slide style node. */
 .sai-tl3uqxjd[data-asset-size="full_width"] .sai-tl3uqxjd__slide {
   padding: 0;
+  min-height: 60px;
+  height: 60px;
 }
 .sai-tl3uqxjd[data-asset-size="full_width"] .sai-tl3uqxjd__zone-asset {
   flex: 1 1 auto;
