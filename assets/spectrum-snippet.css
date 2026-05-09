@@ -1978,12 +1978,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   right: 8px;
 }
 
-/* Dismissable adds a top-right close button. Slide the next chevron inward
- * so the two don't share the same patch of pixels on short bars. */
-.sai-tl3uqxjd[data-dismissable="true"] .sai-tl3uqxjd__chev--next {
-  right: 44px;
-}
-
 .sai-tl3uqxjd__chev:hover {
   background: rgba(0, 0, 0, 0.4);
 }
@@ -1995,22 +1989,28 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 /* ───────── Close button ───────── */
 
+/* Sized small (20×20) so it tucks into the top-right corner above the
+ * vertically-centered next chevron without sharing any pixels with it on
+ * short bars. */
 .sai-tl3uqxjd__close {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 28px;
-  height: 28px;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: none;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 1.125rem;
+  font-size: 0.875rem;
   line-height: 1;
   cursor: pointer;
   border-radius: 50%;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sai-tl3uqxjd__close:hover {
