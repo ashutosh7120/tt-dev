@@ -1902,7 +1902,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   flex-shrink: 0;
 }
 
-
 .sai-tl3uqxjd__asset[data-object-fit="cover"] {
   object-fit: cover;
 }
@@ -2007,6 +2006,46 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 }
 
 .sai-tl3uqxjd__dot:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* ───────── Chevrons (prev/next) ───────── */
+
+.sai-tl3uqxjd__chev {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sai-tl3uqxjd__chev--prev {
+  left: 8px;
+}
+
+.sai-tl3uqxjd__chev--next {
+  right: 8px;
+}
+
+.sai-tl3uqxjd__chev:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.sai-tl3uqxjd__chev:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }

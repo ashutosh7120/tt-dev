@@ -91,6 +91,12 @@
   {%- assign asset_loop = content.asset_loop -%}
 {%- endif -%}
 
+{%- if content.chevrons_enabled == nil -%}
+  {%- assign chevrons_enabled = false -%}
+{%- else -%}
+  {%- assign chevrons_enabled = content.chevrons_enabled -%}
+{%- endif -%}
+
 {%- comment -%}── Bar-level enum scrubbing — replace bogus values with sane defaults ──{%- endcomment -%}
 {%- assign nav_mode = content.nav_mode | default: 'auto_and_manual' -%}
 {%- if nav_mode != 'auto_only' and nav_mode != 'manual_only' and nav_mode != 'auto_and_manual' -%}
@@ -365,6 +371,7 @@
   data-asset-object-fit="{{ asset_object_fit }}"
   data-asset-loop="{% if asset_loop %}true{% else %}false{% endif %}"
   data-promo-copied-text="{{ promo_copied_text | escape }}"
+  data-chevrons-enabled="{% if chevrons_enabled %}true{% else %}false{% endif %}"
   data-bar-version="{{ bar_version }}"
   data-rendered-count="{{ rendered_count }}"
   data-single-slide="{% if single_slide %}true{% else %}false{% endif %}"
@@ -393,6 +400,11 @@
 
   {%- if dismissable -%}
     <button type="button" class="sai-tl3uqxjd__close" aria-label="Dismiss announcement">×</button>
+  {%- endif -%}
+
+  {%- if chevrons_enabled and single_slide == false -%}
+    <button type="button" class="sai-tl3uqxjd__chev sai-tl3uqxjd__chev--prev" aria-label="Previous slide" data-chev="prev">‹</button>
+    <button type="button" class="sai-tl3uqxjd__chev sai-tl3uqxjd__chev--next" aria-label="Next slide" data-chev="next">›</button>
   {%- endif -%}
 
   <div class="sai-tl3uqxjd__live" aria-live="polite" aria-atomic="true"></div>
