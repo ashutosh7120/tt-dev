@@ -118,6 +118,11 @@
   {%- assign scroll_behaviour = 'static' -%}
 {%- endif -%}
 
+{%- assign asset_size = content.asset_size | default: 'thumbnail' -%}
+{%- if asset_size != 'thumbnail' and asset_size != 'full_width' -%}
+  {%- assign asset_size = 'thumbnail' -%}
+{%- endif -%}
+
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
 {%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
   {%- assign asset_object_fit = 'cover' -%}
@@ -368,6 +373,7 @@
   data-swipe-enabled="{% if swipe_enabled %}true{% else %}false{% endif %}"
   data-dismissable="{% if dismissable %}true{% else %}false{% endif %}"
   data-scroll-behaviour="{{ scroll_behaviour }}"
+  data-asset-size="{{ asset_size }}"
   data-asset-object-fit="{{ asset_object_fit }}"
   data-asset-loop="{% if asset_loop %}true{% else %}false{% endif %}"
   data-promo-copied-text="{{ promo_copied_text | escape }}"

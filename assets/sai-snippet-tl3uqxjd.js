@@ -112,6 +112,9 @@
     if (typeof content.scroll_behaviour === 'string') {
       host.setAttribute('data-scroll-behaviour', content.scroll_behaviour)
     }
+    if (typeof content.asset_size === 'string') {
+      host.setAttribute('data-asset-size', content.asset_size)
+    }
     if (typeof content.asset_object_fit === 'string') {
       host.setAttribute('data-asset-object-fit', content.asset_object_fit)
       const assets = host.querySelectorAll('.sai-tl3uqxjd__asset')
