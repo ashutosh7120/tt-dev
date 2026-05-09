@@ -3,8 +3,8 @@
  *
  * Custom element <sai-tl3uqxjd> that owns:
  *   - state machine for [data-state] flips (current / entering / leaving / hidden)
- *   - auto-rotate timer
- *   - dot tablist + keyboard nav + focus-pause
+ *   - auto-rotate timer + focus-pause
+ *   - prev/next chevrons (when chevrons_enabled)
  *   - per-slide Spectrum.Countdown timers + format + expire branches
  *   - swipe gestures with axis-dominance gate
  *   - scroll-behaviour wiring (sticky / show_on_scroll_up)
@@ -87,8 +87,8 @@
    */
   function applyVariant(host, content) {
     if (content == null || typeof content !== 'object') return
-    if (typeof content.nav_mode === 'string') {
-      host.setAttribute('data-nav-mode', content.nav_mode)
+    if (typeof content.auto_rotate === 'boolean') {
+      host.setAttribute('data-auto-rotate', content.auto_rotate ? 'true' : 'false')
     }
     if (typeof content.rotation_seconds === 'number') {
       host.setAttribute('data-rotation-seconds', String(content.rotation_seconds))
@@ -162,7 +162,6 @@
       super()
       this._currentIndex = 0
       this._slides = []
-      this._dots = []
       this._countdowns = []
       this._rotationTimer = null
       this._transitioning = false
@@ -191,7 +190,6 @@
       }
 
       this._slides = Array.from(this.querySelectorAll('.sai-tl3uqxjd__slide'))
-      this._dots = Array.from(this.querySelectorAll('.sai-tl3uqxjd__dot'))
       if (this._slides.length === 0) return
 
       this._abortController = new AbortController()
@@ -200,50 +198,8 @@
       this._setVideoPlayState()
       this._setupCountdowns()
 
-      const navMode = this.getAttribute('data-nav-mode') || 'auto_and_manual'
-      const isAuto = navMode === 'auto_only' || navMode === 'auto_and_manual'
-      if (isAuto && this._slides.length > 1) {
+      if (readBool(this, 'data-auto-rotate', true) && this._slides.length > 1) {
         this._startRotation()
-      }
-
-      for (const dot of this._dots) {
-        dot.addEventListener(
-          'click',
-          (e) => {
-            e.preventDefault()
-            const idx = Number(dot.getAttribute('data-slide-index'))
-            if (Number.isFinite(idx)) this.goTo(idx, 'dot')
-          },
-          { signal },
-        )
-      }
-
-      const tablist = this.querySelector('.sai-tl3uqxjd__dots')
-      if (tablist) {
-        tablist.addEventListener(
-          'keydown',
-          (e) => {
-            const total = this._slides.length
-            if (total <= 1) return
-            const isVertical = this.getAttribute('data-transition-type') === 'slide_push_vertical'
-            const next = isVertical ? 'ArrowDown' : 'ArrowRight'
-            const prev = isVertical ? 'ArrowUp' : 'ArrowLeft'
-            if (e.key === next) {
-              e.preventDefault()
-              this.goTo((this._currentIndex + 1) % total, 'keyboard')
-            } else if (e.key === prev) {
-              e.preventDefault()
-              this.goTo((this._currentIndex - 1 + total) % total, 'keyboard')
-            } else if (e.key === 'Home') {
-              e.preventDefault()
-              this.goTo(0, 'keyboard')
-            } else if (e.key === 'End') {
-              e.preventDefault()
-              this.goTo(total - 1, 'keyboard')
-            }
-          },
-          { signal },
-        )
       }
 
       this.addEventListener(
@@ -436,12 +392,6 @@
       toSlide.setAttribute('data-state', 'entering')
       toSlide.removeAttribute('inert')
 
-      for (let i = 0; i < this._dots.length; i++) {
-        const isActive = i === to
-        this._dots[i].setAttribute('aria-selected', isActive ? 'true' : 'false')
-        this._dots[i].setAttribute('tabindex', isActive ? '0' : '-1')
-      }
-
       this._track?.('announcement_bar:slide_change', { from, to, source })
 
       if (source !== 'auto') {
@@ -560,12 +510,6 @@
           const targetSlide = this._slides[nextIdx]
           targetSlide.setAttribute('data-state', 'entering')
           targetSlide.removeAttribute('inert')
-
-          for (let i = 0; i < this._dots.length; i++) {
-            const isActive = i === nextIdx
-            this._dots[i].setAttribute('aria-selected', isActive ? 'true' : 'false')
-            this._dots[i].setAttribute('tabindex', isActive ? '0' : '-1')
-          }
 
           const duration = readNumber(this, 'data-transition-duration-ms', 400)
           window.setTimeout(() => {

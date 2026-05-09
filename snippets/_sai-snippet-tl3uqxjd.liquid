@@ -1,9 +1,9 @@
 {%- comment -%}
   Announcement Bar - Carousel. Discrete-slide rotator with one slide visible
-  at a time; transitions in/out on a timer or via merchant-driven dot
-  navigation. Each slide is a self-contained unit (asset, two title blocks,
-  CTA, timer) arranged in a 3-zone flex layout that re-centers when zones
-  are absent.
+  at a time; transitions in/out on a timer or via prev/next chevrons and
+  swipe gestures. Each slide is a self-contained unit (asset, two title
+  blocks, CTA, timer) arranged in a 3-zone flex layout that re-centers when
+  zones are absent.
 
   Wrapper contract:
     - variant            : default variant from mo.variants.value.variants
@@ -12,7 +12,7 @@
     - experience_handle  : (consumed by wrapper outer div)
 
   variant.content fields:
-    - nav_mode               string  'auto_only' | 'manual_only' | 'auto_and_manual'
+    - auto_rotate            boolean Whether the carousel rotates on a timer.
     - rotation_seconds       number  Auto-rotate interval (3..60).
     - transition_type        string  'fade' | 'slide_push_horizontal' | 'slide_push_vertical'
     - transition_duration_ms number  Animation duration in ms (100..2000).
@@ -97,12 +97,13 @@
   {%- assign chevrons_enabled = content.chevrons_enabled -%}
 {%- endif -%}
 
-{%- comment -%}── Bar-level enum scrubbing — replace bogus values with sane defaults ──{%- endcomment -%}
-{%- assign nav_mode = content.nav_mode | default: 'auto_and_manual' -%}
-{%- if nav_mode != 'auto_only' and nav_mode != 'manual_only' and nav_mode != 'auto_and_manual' -%}
-  {%- assign nav_mode = 'auto_and_manual' -%}
+{%- if content.auto_rotate == nil -%}
+  {%- assign auto_rotate = true -%}
+{%- else -%}
+  {%- assign auto_rotate = content.auto_rotate -%}
 {%- endif -%}
 
+{%- comment -%}── Bar-level enum scrubbing — replace bogus values with sane defaults ──{%- endcomment -%}
 {%- assign rotation_seconds = content.rotation_seconds | default: 5 -%}
 
 {%- assign transition_type = content.transition_type | default: 'fade' -%}
@@ -357,11 +358,10 @@
   {%- endif -%}
 
   {%- assign bar_version = content.slides | json | sha256 -%}
-  {%- assign last_index = rendered_count | minus: 1 -%}
 
 <sai-tl3uqxjd
   class="sai-tl3uqxjd sai-tl3uqxjd--scroll-{{ scroll_behaviour }}{% if single_slide %} sai-tl3uqxjd--single{% endif %} sai-tl3uqxjd--transition-{{ transition_type }}"
-  data-nav-mode="{{ nav_mode }}"
+  data-auto-rotate="{% if auto_rotate %}true{% else %}false{% endif %}"
   data-rotation-seconds="{{ rotation_seconds }}"
   data-transition-type="{{ transition_type }}"
   data-transition-duration-ms="{{ transition_duration_ms }}"
@@ -382,21 +382,6 @@
   aria-label="Announcement bar"
 >
   <div class="sai-tl3uqxjd__rail">{{ slides_html }}</div>
-
-  {%- unless single_slide -%}
-    <div class="sai-tl3uqxjd__dots" role="tablist" aria-label="Slide navigation">
-      {%- for i in (0..last_index) -%}
-        <button type="button"
-                class="sai-tl3uqxjd__dot"
-                role="tab"
-                aria-controls="sai-tl3uqxjd-slide-{{ i }}"
-                aria-selected="{% if i == 0 %}true{% else %}false{% endif %}"
-                aria-label="Show slide {{ i | plus: 1 }}"
-                data-slide-index="{{ i }}"
-                tabindex="{% if i == 0 %}0{% else %}-1{% endif %}"></button>
-      {%- endfor -%}
-    </div>
-  {%- endunless -%}
 
   {%- if dismissable -%}
     <button type="button" class="sai-tl3uqxjd__close" aria-label="Dismiss announcement">×</button>
