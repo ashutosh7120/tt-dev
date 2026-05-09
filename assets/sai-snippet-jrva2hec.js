@@ -201,12 +201,6 @@
     }
     fillCopiesToViewport()
 
-    // Mark the host ready so CSS can flip visibility to visible. Without
-    // this gate, the bar paints from T=0 with the natural-width SSR track
-    // (slides clustered at left, empty space on the right) and the
-    // subsequent JS-driven clone reflow looks like the bar "spreads" out.
-    root.setAttribute('data-ready', 'true')
-
     function setDuration() {
       if (reducedMotion?.matches) return
       // Re-read each call so applyVariant's data-ticker-seconds update is
@@ -228,6 +222,12 @@
       setDuration()
     }
     setDuration()
+
+    // Flip the host's data-ready attribute so CSS unpauses the animation.
+    // This must happen AFTER setDuration so the marquee starts at the
+    // correct speed; otherwise it would briefly run at the default duration
+    // and snap-restart when JS updates the value.
+    root.setAttribute('data-ready', 'true')
 
     let resizeObserver = null
     if (typeof ResizeObserver !== 'undefined') {
