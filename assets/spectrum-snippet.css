@@ -750,15 +750,7 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   flex-wrap: nowrap;
   width: max-content;
   animation: sai-jrva2hec-marquee var(--sai-jrva2hec-duration) linear infinite;
-  /* Paused until JS finishes fillCopiesToViewport + setDuration so the
-     marquee never starts mid-flight against an under-wide track. JS flips
-     the host's data-ready attribute once setup completes. */
-  animation-play-state: paused;
   will-change: transform;
-}
-
-.sai-jrva2hec[data-ready="true"] .sai-jrva2hec__track {
-  animation-play-state: running;
 }
 
 /* Slides pack tightly within each copy at their natural width. JS clones
