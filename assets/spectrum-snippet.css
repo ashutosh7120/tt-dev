@@ -702,14 +702,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   background-color: var(--sai-color-bg);
   color: var(--sai-color-fg);
   font-family: var(--sai-font-body);
-  /* Hidden until JS finishes fillCopiesToViewport so the under-wide SSR
-     track (slides clustered with empty trailing space) is never visible.
-     Layout space is still reserved (height intact) so nothing below jumps. */
-  visibility: hidden;
-}
-
-.sai-jrva2hec[data-ready="true"] {
-  visibility: visible;
 }
 
 .sai-jrva2hec *,
@@ -758,7 +750,18 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   flex-wrap: nowrap;
   width: max-content;
   animation: sai-jrva2hec-marquee var(--sai-jrva2hec-duration) linear infinite;
+  /* Paused until JS computes the duration via setDuration(). The default
+     --sai-jrva2hec-duration is for a viewport-width track; with our SSR
+     multiplier the actual track is wider, so running the animation at the
+     default value would scroll at the wrong (faster) speed and then snap
+     back to the start when JS sets the correct duration. JS flips the
+     host's data-ready attribute once setDuration completes. */
+  animation-play-state: paused;
   will-change: transform;
+}
+
+.sai-jrva2hec[data-ready="true"] .sai-jrva2hec__track {
+  animation-play-state: running;
 }
 
 /* Slides pack tightly within each copy at their natural width. JS clones
@@ -1942,7 +1945,8 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 /* Override chevron side-padding for full-width slides — the asset must
  * span edge-to-edge regardless of chevron presence. Specificity is bumped
  * past the host-level chevron rule via the extra `:not()` predicate. */
-.sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"]) .sai-tl3uqxjd__slide--asset-full-width {
+.sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"])
+  .sai-tl3uqxjd__slide--asset-full-width {
   padding-left: 0;
   padding-right: 0;
 }
