@@ -1861,12 +1861,21 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 }
 
 .sai-tl3uqxjd__zone-titles {
-  flex: 1 1 auto;
+  /* Default: don't grow — keeps zones packed together when justify-content
+   * is `center` (i.e. fewer than 3 zones present). When all 3 zones are
+   * present and the slide uses `space-between`, the override below grows
+   * the titles zone to consume the middle space. */
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
   text-align: center;
   min-width: 0;
+}
+
+.sai-tl3uqxjd__slide--has-asset.sai-tl3uqxjd__slide--has-titles.sai-tl3uqxjd__slide--has-actions
+  .sai-tl3uqxjd__zone-titles {
+  flex: 1 1 auto;
 }
 
 .sai-tl3uqxjd__zone-actions {
