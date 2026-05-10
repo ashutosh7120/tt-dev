@@ -1927,14 +1927,16 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 /* Full-width asset mode (per-slide) — banner-style, asset spans the entire
  * bar. Drops the 80px thumbnail cap, removes slide padding, and stretches
- * the asset to fill the slide. Slide height is capped to a sensible banner
- * default (60px) so a 1080p video doesn't blow the page out. Each slide
- * opts in independently via `slide.asset_size = 'full_width'`, so a
- * carousel can mix banner slides with thumbnail slides. */
+ * the asset to fill the slide. The slide itself stretches to the rail's
+ * grid-cell height (which sizes to the tallest sibling slide) so the
+ * asset always fills the bar — no empty bg gutters above/below. The
+ * 60px min-height keeps it a sensible banner when every slide is
+ * full-width. Each slide opts in independently via
+ * `slide.asset_size = 'full_width'`, so a carousel can mix banner
+ * slides with thumbnail slides. */
 .sai-tl3uqxjd__slide--asset-full-width {
   padding: 0;
   min-height: 60px;
-  height: 60px;
 }
 .sai-tl3uqxjd__slide--asset-full-width .sai-tl3uqxjd__zone-asset {
   flex: 1 1 auto;
