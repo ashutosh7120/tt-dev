@@ -1628,6 +1628,13 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 .sai-tl3uqxjd {
   display: block;
   width: 100%;
+  /* When `max_width` is > 0 the merchant gets a Liquid-set
+   * --sai-tl3uqxjd-max-width custom property; the bar caps to that and
+   * centres horizontally. When unset, falls back to none → full-bleed.
+   * On viewports narrower than the cap the host already fills 100% so
+   * this only takes visible effect on desktop. */
+  max-width: var(--sai-tl3uqxjd-max-width, none);
+  margin-inline: auto;
   position: relative;
   overflow: hidden;
   font: inherit;

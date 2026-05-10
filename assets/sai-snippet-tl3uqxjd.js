@@ -112,6 +112,14 @@
     if (typeof content.scroll_behaviour === 'string') {
       host.setAttribute('data-scroll-behaviour', content.scroll_behaviour)
     }
+    if (typeof content.max_width === 'number') {
+      host.setAttribute('data-max-width', String(content.max_width))
+      if (content.max_width > 0) {
+        host.style.setProperty('--sai-tl3uqxjd-max-width', `${content.max_width}px`)
+      } else {
+        host.style.removeProperty('--sai-tl3uqxjd-max-width')
+      }
+    }
     if (typeof content.asset_object_fit === 'string') {
       host.setAttribute('data-asset-object-fit', content.asset_object_fit)
       const assets = host.querySelectorAll('.sai-tl3uqxjd__asset')
