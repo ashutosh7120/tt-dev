@@ -29,10 +29,14 @@
   /**
    * URL allowlist matching the Liquid-side check (amendment B). Accepts
    * absolute / and the http(s):, mailto:, tel: schemes. Anything else
-   * including javascript:, data:, vbscript: returns null.
+   * including javascript:, data:, vbscript: returns null. The `//`
+   * leading-pair check rejects protocol-relative URLs (`//evil.com`)
+   * which browsers resolve to the page's protocol and would silently
+   * navigate off-site.
    */
   function validateUrl(url) {
     if (typeof url !== 'string' || url === '') return null
+    if (url.startsWith('//')) return null
     if (url.charAt(0) === '/') return url
     if (url.startsWith('http://') || url.startsWith('https://')) return url
     if (url.startsWith('mailto:') || url.startsWith('tel:')) return url

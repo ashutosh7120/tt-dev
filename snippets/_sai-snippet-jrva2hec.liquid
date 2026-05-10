@@ -205,7 +205,7 @@
                  fetchpriority="high"
                  decoding="async"
                  data-object-fit="{{ asset_object_fit }}"
-                 alt="{{ title_text | strip_html | escape | truncate: 80 }}">
+                 alt="{{ title_text | strip_html | truncate: 80 | escape }}">
           {%- endif -%}
         {%- endif -%}
         <span class="sai-jrva2hec__title">{{ title_text }}</span>

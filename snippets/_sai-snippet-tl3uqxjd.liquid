@@ -176,26 +176,38 @@
         {%- endif -%}
       {%- endif -%}
 
-      {%- comment -%} URL allowlist — / | http:// | https:// | mailto: | tel: {%- endcomment -%}
+      {%- comment -%}
+        URL allowlist — same-origin / | http:// | https:// | mailto: | tel:.
+        The `r2` check rejects protocol-relative URLs like `//evil.com` that
+        browsers resolve to the page's protocol — those would silently
+        navigate visitors off-site even though everything else in this block
+        is closing the click-XSS / phishing surface.
+      {%- endcomment -%}
       {%- assign redirect_url_safe = '' -%}
       {%- if redirect_url_raw != '' -%}
         {%- assign r1 = redirect_url_raw | slice: 0, 1 -%}
+        {%- assign r2 = redirect_url_raw | slice: 0, 2 -%}
         {%- assign r4 = redirect_url_raw | slice: 0, 4 -%}
         {%- assign r7 = redirect_url_raw | slice: 0, 7 -%}
         {%- assign r8 = redirect_url_raw | slice: 0, 8 -%}
-        {%- if r1 == '/' or r4 == 'tel:' or r7 == 'mailto:' or r7 == 'http://' or r8 == 'https://' -%}
-          {%- assign redirect_url_safe = redirect_url_raw -%}
+        {%- if r2 != '//' -%}
+          {%- if r1 == '/' or r4 == 'tel:' or r7 == 'mailto:' or r7 == 'http://' or r8 == 'https://' -%}
+            {%- assign redirect_url_safe = redirect_url_raw -%}
+          {%- endif -%}
         {%- endif -%}
       {%- endif -%}
 
       {%- assign cta_url_safe = '' -%}
       {%- if cta_url_raw != '' -%}
         {%- assign c1 = cta_url_raw | slice: 0, 1 -%}
+        {%- assign c2 = cta_url_raw | slice: 0, 2 -%}
         {%- assign c4 = cta_url_raw | slice: 0, 4 -%}
         {%- assign c7 = cta_url_raw | slice: 0, 7 -%}
         {%- assign c8 = cta_url_raw | slice: 0, 8 -%}
-        {%- if c1 == '/' or c4 == 'tel:' or c7 == 'mailto:' or c7 == 'http://' or c8 == 'https://' -%}
-          {%- assign cta_url_safe = cta_url_raw -%}
+        {%- if c2 != '//' -%}
+          {%- if c1 == '/' or c4 == 'tel:' or c7 == 'mailto:' or c7 == 'http://' or c8 == 'https://' -%}
+            {%- assign cta_url_safe = cta_url_raw -%}
+          {%- endif -%}
         {%- endif -%}
       {%- endif -%}
 
@@ -276,9 +288,15 @@
         HTML before storing so screen readers don't read tag soup. Falls back
         to title_2 when title_1 is empty.
       {%- endcomment -%}
-      {%- assign aria_label = title_1 | strip_html | escape | truncate: 80 -%}
+      {%- comment -%}
+        Order matters: strip_html → truncate → escape. Truncating AFTER
+        escape can cut mid-entity (e.g. `Bath &amp; Body` truncated at 8
+        chars → `Bath &am...`), which corrupts the resulting HTML attribute.
+        Truncate on the raw text, THEN escape the trimmed result cleanly.
+      {%- endcomment -%}
+      {%- assign aria_label = title_1 | strip_html | truncate: 80 | escape -%}
       {%- if aria_label == '' -%}
-        {%- assign aria_label = title_2 | strip_html | escape | truncate: 80 -%}
+        {%- assign aria_label = title_2 | strip_html | truncate: 80 | escape -%}
       {%- endif -%}
 
       {%- if has_cta -%}
