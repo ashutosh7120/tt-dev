@@ -428,8 +428,15 @@
                       class="sai-tl3uqxjd__cta"
                       data-cta-type="{{ cta_type | escape }}"
                       data-slide-index="{{ current_index }}"
-                      {%- if cta_type == 'redirect' %} data-cta-url="{{ cta_url_safe | escape }}"{% endif %}
-                      {%- if cta_type == 'promo_code' %} data-promo-feedback="{{ cta_promo_feedback | escape }}"{% endif %}>{{ cta_text | escape }}</button>
+                      {%- if cta_type == 'redirect' %} data-cta-url="{{ cta_url_safe | escape }}"{% endif -%}
+                      {%- comment -%}
+                        For promo_code CTAs, bake the actual code into a
+                        stable attribute. The button's text content is
+                        mutated to "Code copied!" for 2s on click — reading
+                        the code back from textContent would pick up that
+                        feedback string on a re-click within the window.
+                      {%- endcomment -%}
+                      {%- if cta_type == 'promo_code' %} data-promo-feedback="{{ cta_promo_feedback | escape }}" data-promo-code="{{ cta_text | escape }}"{% endif %}>{{ cta_text | escape }}</button>
             {%- endif -%}
           </div>
         {%- endif -%}

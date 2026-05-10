@@ -735,13 +735,30 @@
           targetSlide.setAttribute('data-state', 'entering')
           targetSlide.removeAttribute('inert')
 
+          // Hold the FSM lock for the duration so an auto-rotate tick or
+          // chevron/swipe click can't fire a parallel goTo mid-flight
+          // (which would flip data-state on both slides and visibly
+          // stutter). Mirrors goTo's queue-of-1 pattern.
+          this._transitioning = true
+
           const duration = readNumber(this, 'data-transition-duration-ms', 400)
           this._expireTimer = window.setTimeout(() => {
             this._expireTimer = null
-            if (!this.isConnected) return
+            if (!this.isConnected) {
+              this._transitioning = false
+              return
+            }
             targetSlide.setAttribute('data-state', 'current')
             this._currentIndex = nextIdx
             this._setVideoPlayState()
+            this._transitioning = false
+
+            // Drain any goTo that was attempted while we held the lock.
+            const queued = this._pendingTarget
+            this._pendingTarget = null
+            if (queued !== null && queued !== this._currentIndex) {
+              this.goTo(queued, 'auto')
+            }
           }, duration)
         }
       }
@@ -778,7 +795,12 @@
       }
 
       if (ctaType === 'promo_code') {
-        const code = (btn.textContent || '').trim()
+        // Read from data-promo-code, NOT textContent — textContent gets
+        // swapped to "Code copied!" for 2s after a successful copy, so a
+        // re-click within that window would otherwise copy the feedback
+        // string instead of the real code. Fall back to textContent if the
+        // attribute is missing (older SSR / hand-written wrappers).
+        const code = (btn.getAttribute('data-promo-code') || btn.textContent || '').trim()
         const feedbackRaw = btn.getAttribute('data-promo-feedback') || 'inline_swap'
         const feedback = FEEDBACK_MODES.has(feedbackRaw) ? feedbackRaw : 'inline_swap'
         const copiedText = this.getAttribute('data-promo-copied-text') || 'Code copied!'
@@ -796,10 +818,12 @@
         () => {
           this._track?.('announcement_bar:promo_copied', { slide_index: slideIdx, code })
           if (feedback === 'inline_swap' || feedback === 'both') {
-            const original = btn.textContent
+            // Restore from the stable code attribute too — a chain of
+            // re-clicks during overlapping feedback windows would otherwise
+            // capture the feedback string as `original` and never recover.
             btn.textContent = copiedText
             window.setTimeout(() => {
-              btn.textContent = original
+              btn.textContent = code
             }, 2000)
           }
           if (feedback === 'toast' || feedback === 'both') {
