@@ -302,6 +302,10 @@
 
     disconnectedCallback() {
       this._stopRotation()
+      if (this._countdownPoll !== null && this._countdownPoll !== undefined) {
+        window.clearInterval(this._countdownPoll)
+        this._countdownPoll = null
+      }
       if (this._abortController) {
         this._abortController.abort()
         this._abortController = null
@@ -433,8 +437,36 @@
 
     /* ────────── Countdowns ────────── */
 
+    /**
+     * Sync fast path when `Spectrum.Countdown` is already on `window`. When
+     * the carousel script (loaded `async`) beats the SDK script (loaded
+     * `defer`), we poll for up to 5 seconds and then run setup. Without this
+     * wait, every timer element would be silently removed on fast cold loads.
+     */
     _setupCountdowns() {
-      const Countdown = window.Spectrum?.Countdown
+      const ctor = window.Spectrum?.Countdown
+      if (ctor) {
+        this._setupCountdownsWith(ctor)
+        return
+      }
+      const start = Date.now()
+      this._countdownPoll = window.setInterval(() => {
+        const ready = window.Spectrum?.Countdown
+        if (ready) {
+          window.clearInterval(this._countdownPoll)
+          this._countdownPoll = null
+          if (this.isConnected) this._setupCountdownsWith(ready)
+          return
+        }
+        if (Date.now() - start >= 5000) {
+          window.clearInterval(this._countdownPoll)
+          this._countdownPoll = null
+          if (this.isConnected) this._setupCountdownsWith(null)
+        }
+      }, 50)
+    }
+
+    _setupCountdownsWith(Countdown) {
       const timerEls = this.querySelectorAll('.sai-tl3uqxjd__timer')
       for (const timerEl of timerEls) {
         const slide = timerEl.closest('.sai-tl3uqxjd__slide')
