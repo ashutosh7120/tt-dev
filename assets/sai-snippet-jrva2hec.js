@@ -186,14 +186,21 @@
         // inputs (e.g. zero-width slides). 32 × even-modest content > any
         // realistic viewport.
         let safety = 32
+        // Snapshot the originals before any cloning — only the originals are
+        // real slides; everything cloned is a visual duplicate and must be
+        // hidden from AT + the tab order to satisfy WCAG 2.4.3 / 4.1.2.
+        const originals = Array.from(copy.children)
+        if (originals.length === 0) continue
         while (copy.getBoundingClientRect().width < viewportWidth && safety-- > 0) {
-          const originals = Array.from(copy.children)
-          if (originals.length === 0) break
           for (const child of originals) {
             const clone = child.cloneNode(true)
             // Mark clones so analytics dedupe slide_view by data-slide-index
             // doesn't double-count.
             clone.setAttribute('data-cloned', 'true')
+            // Take clones out of the accessibility tree AND the tab order —
+            // tabbing through a marquee shouldn't visit the same link twice.
+            clone.setAttribute('aria-hidden', 'true')
+            clone.setAttribute('inert', '')
             copy.appendChild(clone)
           }
         }

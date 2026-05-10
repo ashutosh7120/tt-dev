@@ -228,7 +228,15 @@
   <div class="sai-jrva2hec__viewport">
     <div class="sai-jrva2hec__track" data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}">
       <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
-      <div class="sai-jrva2hec__track-copy" aria-hidden="true">{{ slides_html }}</div>
+      {%- comment -%}
+        Visual duplicate for the marquee loop. `aria-hidden` alone doesn't
+        take the inner <a>s out of the tab order — `inert` (HTML 5.2+) does
+        both: hides from AT AND removes from sequential focus navigation.
+        Keyboard users would otherwise hit every link twice. Falls back to
+        the same semantics on browsers that ignore inert because aria-hidden
+        is still set (WCAG 2.4.3 / 4.1.2).
+      {%- endcomment -%}
+      <div class="sai-jrva2hec__track-copy" aria-hidden="true" inert>{{ slides_html }}</div>
     </div>
   </div>
 </sai-jrva2hec>

@@ -257,8 +257,17 @@
         {%- assign slide_bg = '#ffffff' -%}
       {%- endif -%}
 
+      {%- comment -%}
+        Real-extension check (matches the ticker pattern): strip the query
+        string and hash, then take the last dot-segment of the path. A bare
+        `contains` substring match misroutes URLs whose query string or path
+        incidentally contains '.mp4' / '.webm' / '.mov' (e.g.
+        `cdn.example.com/foo.jpg?ref=video.mp4`).
+      {%- endcomment -%}
+      {%- assign asset_path = asset_url_lower | split: '?' | first | split: '#' | first -%}
+      {%- assign asset_ext = asset_path | split: '.' | last -%}
       {%- assign is_video = false -%}
-      {%- if asset_url_lower contains '.mp4' or asset_url_lower contains '.webm' or asset_url_lower contains '.mov' -%}
+      {%- if asset_ext == 'mp4' or asset_ext == 'webm' or asset_ext == 'mov' -%}
         {%- assign is_video = true -%}
       {%- endif -%}
 
@@ -283,7 +292,7 @@
              data-aria-label="{{ aria_label }}"
              {%- if redirect_url_safe != '' %} data-redirect-url="{{ redirect_url_safe | escape }}"{% endif %}
              {%- if initial_state == 'hidden' %} inert{% endif %}
-             style="--sai-slide-bg: {{ slide_bg }};">
+             style="--sai-slide-bg: {{ slide_bg | escape }};">
       {%- else -%}
         <a id="{{ slide_id }}"
            class="sai-tl3uqxjd__slide{{ mod_class }}"
@@ -295,7 +304,7 @@
            data-aria-label="{{ aria_label }}"
            {%- if redirect_url_safe != '' %} href="{{ redirect_url_safe | escape }}"{% else %} aria-disabled="true"{% endif %}
            {%- if initial_state == 'hidden' %} inert{% endif %}
-           style="--sai-slide-bg: {{ slide_bg }};">
+           style="--sai-slide-bg: {{ slide_bg | escape }};">
       {%- endif -%}
 
         {%- if asset_url != '' -%}

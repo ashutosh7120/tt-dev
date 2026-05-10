@@ -301,7 +301,11 @@
       const spectrumAi = window.__spectrumAi
       if (spectrumAi?.snippet && typeof spectrumAi.snippet.bind === 'function') {
         const handle = spectrumAi.snippet.bind(this, ({ variants, currentVariantId }) => {
-          const variant = variants && currentVariantId ? variants[currentVariantId] : null
+          // `variants` is an array of SnippetBindVariant; look up by id.
+          const variant =
+            Array.isArray(variants) && currentVariantId
+              ? variants.find((v) => v?.variantId === currentVariantId)
+              : null
           if (variant?.content) applyVariant(this, variant.content)
         })
         this._track = handle && typeof handle.track === 'function' ? handle.track : null
