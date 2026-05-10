@@ -1628,13 +1628,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 .sai-tl3uqxjd {
   display: block;
   width: 100%;
-  /* When `max_width` is > 0 the merchant gets a Liquid-set
-   * --sai-tl3uqxjd-max-width custom property; the bar caps to that and
-   * centres horizontally. When unset, falls back to none → full-bleed.
-   * On viewports narrower than the cap the host already fills 100% so
-   * this only takes visible effect on desktop. */
-  max-width: var(--sai-tl3uqxjd-max-width, none);
-  margin-inline: auto;
   position: relative;
   overflow: hidden;
   font: inherit;
@@ -1670,11 +1663,19 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  /* `--sai-tl3uqxjd-slide-pad-bottom` defaults to the symmetric 0.75rem
-   * (matches top padding). When dots are visible the host class bumps it
-   * to 1.5rem so the absolutely-positioned dots have breathing room
-   * beneath the slide content. */
-  padding: 0.75rem 1rem;
+  /* Inline padding combines two pieces:
+   *   1. `--sai-tl3uqxjd-side-pad` — the per-slide base inset (1rem default,
+   *      bumped to 44px when chevrons are enabled to clear the buttons).
+   *   2. The max-width offset — when `max_width` is set, half of the
+   *      viewport-vs-cap difference (clamped to 0 so narrower viewports
+   *      still fill 100%). This centres the slide's content within the
+   *      cap while the slide background stays full-bleed. */
+  --sai-tl3uqxjd-side-pad: 1rem;
+  padding-block: 0.75rem;
+  padding-inline: calc(
+    max(0px, (100% - var(--sai-tl3uqxjd-max-width, 100%)) / 2) +
+    var(--sai-tl3uqxjd-side-pad)
+  );
   min-height: 48px;
   background: var(--sai-slide-bg, #ffffff);
   text-decoration: none;
@@ -1691,13 +1692,12 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   justify-content: space-between;
 }
 
-/* When chevrons are enabled, reserve room on each side of the slide so
- * space-between'd content (asset on the left, actions on the right) doesn't
- * collide with the absolutely-positioned chevron buttons (28px @ 8px from
- * the edge). */
+/* When chevrons are enabled, bump the side-pad CSS variable so content
+ * doesn't collide with the absolutely-positioned chevron buttons (28px @
+ * 8px from the edge). The slide's padding-inline calc picks up the new
+ * value and combines with any max-width offset. */
 .sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"]) .sai-tl3uqxjd__slide {
-  padding-left: 44px;
-  padding-right: 44px;
+  --sai-tl3uqxjd-side-pad: 44px;
 }
 
 /* Single-zone-only — give the lone child a comfortable max width so it
@@ -1949,14 +1949,6 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   height: 100%;
 }
 
-/* Override chevron side-padding for full-width slides — the asset must
- * span edge-to-edge regardless of chevron presence. Specificity is bumped
- * past the host-level chevron rule via the extra `:not()` predicate. */
-.sai-tl3uqxjd[data-chevrons-enabled="true"]:not([data-single-slide="true"])
-  .sai-tl3uqxjd__slide--asset-full-width {
-  padding-left: 0;
-  padding-right: 0;
-}
 
 /* ───────── Titles ───────── */
 
@@ -2022,12 +2014,17 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   justify-content: center;
 }
 
+/* Chevrons hug the inner content edge: when max_width is unset the offset
+ * is 0 and they sit at 8px from the host edge (default behaviour); when
+ * max_width caps content, they shift inward by the same offset the slide
+ * uses, so they align with the centred content area instead of floating
+ * in the bg-only side gutters. */
 .sai-tl3uqxjd__chev--prev {
-  left: 8px;
+  left: calc(max(0px, (100% - var(--sai-tl3uqxjd-max-width, 100%)) / 2) + 8px);
 }
 
 .sai-tl3uqxjd__chev--next {
-  right: 8px;
+  right: calc(max(0px, (100% - var(--sai-tl3uqxjd-max-width, 100%)) / 2) + 8px);
 }
 
 .sai-tl3uqxjd__chev:hover {
@@ -2043,11 +2040,12 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 /* Sized small (20×20) so it tucks into the top-right corner above the
  * vertically-centered next chevron without sharing any pixels with it on
- * short bars. */
+ * short bars. Right offset uses the same max-width-aware formula as the
+ * chevrons so it aligns with the centred content edge. */
 .sai-tl3uqxjd__close {
   position: absolute;
   top: 2px;
-  right: 2px;
+  right: calc(max(0px, (100% - var(--sai-tl3uqxjd-max-width, 100%)) / 2) + 2px);
   width: 20px;
   height: 20px;
   padding: 0;
