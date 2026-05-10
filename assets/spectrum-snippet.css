@@ -1644,6 +1644,11 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
    * horizontal carousel (and vice versa). Set per transition direction
    * below. */
   touch-action: auto;
+  /* When `max_height` is > 0, cap the rail height so taller slides don't
+   * stretch the bar. Content beyond the cap is clipped via overflow:hidden.
+   * Default `none` lets the rail size to the tallest slide. */
+  max-height: var(--sai-tl3uqxjd-max-height, none);
+  overflow: hidden;
 }
 
 .sai-tl3uqxjd[data-transition-type="slide_push_horizontal"] .sai-tl3uqxjd__rail {

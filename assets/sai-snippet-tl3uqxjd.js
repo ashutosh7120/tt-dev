@@ -120,6 +120,14 @@
         host.style.removeProperty('--sai-tl3uqxjd-max-width')
       }
     }
+    if (typeof content.max_height === 'number') {
+      host.setAttribute('data-max-height', String(content.max_height))
+      if (content.max_height > 0) {
+        host.style.setProperty('--sai-tl3uqxjd-max-height', `${content.max_height}px`)
+      } else {
+        host.style.removeProperty('--sai-tl3uqxjd-max-height')
+      }
+    }
     if (typeof content.asset_object_fit === 'string') {
       host.setAttribute('data-asset-object-fit', content.asset_object_fit)
       const assets = host.querySelectorAll('.sai-tl3uqxjd__asset')

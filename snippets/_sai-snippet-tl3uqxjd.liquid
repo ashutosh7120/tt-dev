@@ -123,6 +123,11 @@
   {%- assign max_width = 0 -%}
 {%- endif -%}
 
+{%- assign max_height = content.max_height | default: 0 -%}
+{%- if max_height != 0 and max_height < 0 -%}
+  {%- assign max_height = 0 -%}
+{%- endif -%}
+
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
 {%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
   {%- assign asset_object_fit = 'cover' -%}
@@ -379,6 +384,7 @@
   data-dismissable="{% if dismissable %}true{% else %}false{% endif %}"
   data-scroll-behaviour="{{ scroll_behaviour }}"
   data-max-width="{{ max_width }}"
+  data-max-height="{{ max_height }}"
   data-asset-object-fit="{{ asset_object_fit }}"
   data-asset-loop="{% if asset_loop %}true{% else %}false{% endif %}"
   data-promo-copied-text="{{ promo_copied_text | escape }}"
@@ -387,7 +393,7 @@
   data-rendered-count="{{ rendered_count }}"
   data-single-slide="{% if single_slide %}true{% else %}false{% endif %}"
   data-slides-warn="{% if slides_warn %}true{% else %}false{% endif %}"
-  style="--sai-tl3uqxjd-transition-duration: {{ transition_duration_ms }}ms;{% if max_width > 0 %} --sai-tl3uqxjd-max-width: {{ max_width }}px;{% endif %}"
+  style="--sai-tl3uqxjd-transition-duration: {{ transition_duration_ms }}ms;{% if max_width > 0 %} --sai-tl3uqxjd-max-width: {{ max_width }}px;{% endif %}{% if max_height > 0 %} --sai-tl3uqxjd-max-height: {{ max_height }}px;{% endif %}"
   role="region"
   aria-roledescription="carousel"
   aria-label="Announcement bar"
