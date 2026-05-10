@@ -228,6 +228,7 @@
       this._abortController = null
       this._intersectionObserver = null
       this._seenSlideViews = new Set()
+      this._barInView = false
       this._toastTimer = null
     }
 
@@ -553,6 +554,7 @@
       toSlide.removeAttribute('inert')
 
       this._track?.('announcement_bar:slide_change', { from, to, source })
+      this._fireSlideView(to)
 
       if (source !== 'auto') {
         const live = this.querySelector('.sai-tl3uqxjd__live')
@@ -951,26 +953,41 @@
       if (window.scrollY < 16) this.classList.add('sai-tl3uqxjd--visible')
     }
 
-    /* ────────── Slide view observer ────────── */
-
+    /* ────────── Slide view observer ──────────
+     *
+     * All slides share the same grid cell, so per-slide IntersectionObserver
+     * fires for every slide on first paint (geometry is identical; opacity
+     * doesn't count toward intersectionRatio). Instead, observe the HOST to
+     * detect when the bar enters the viewport, then fire `slide_view` from
+     * `_fireSlideView` driven by goTo + initial connect — that path knows
+     * which slide is actually `current`.
+     */
     _wireSlideViewObserver() {
       if (typeof IntersectionObserver === 'undefined') return
       this._intersectionObserver = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) {
             if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-              const target = entry.target
-              const idx = Number(target.getAttribute('data-slide-index'))
-              if (Number.isFinite(idx) && !this._seenSlideViews.has(idx)) {
-                this._seenSlideViews.add(idx)
-                this._track?.('announcement_bar:slide_view', { slide_index: idx })
-              }
+              this._barInView = true
+              // Fire the deferred initial view (slide 0) now that the bar
+              // is actually visible.
+              this._fireSlideView(this._currentIndex)
+            } else if (!entry.isIntersecting) {
+              this._barInView = false
             }
           }
         },
         { threshold: [0.5] },
       )
-      for (const slide of this._slides) this._intersectionObserver.observe(slide)
+      this._intersectionObserver.observe(this)
+    }
+
+    _fireSlideView(idx) {
+      if (!this._barInView) return
+      if (!Number.isFinite(idx)) return
+      if (this._seenSlideViews.has(idx)) return
+      this._seenSlideViews.add(idx)
+      this._track?.('announcement_bar:slide_view', { slide_index: idx })
     }
   }
 

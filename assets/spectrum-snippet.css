@@ -1999,6 +1999,11 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 /* ───────── Chevrons (prev/next) ───────── */
 
+/* Chevron, close, and toast tint the foreground at varying alpha via
+ * color-mix so they adapt to dark merchant themes (the original literal
+ * `rgba(0, 0, 0, …)` rendered dark-on-dark and was indistinguishable).
+ * Each tint is exposed as a CSS custom property merchants can override
+ * per-instance via the chevron / close_button style nodes. */
 .sai-tl3uqxjd__chev {
   position: absolute;
   top: 50%;
@@ -2007,7 +2012,7 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   height: 28px;
   padding: 0;
   border: none;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--sai-tl3uqxjd-chev-bg, color-mix(in srgb, currentColor 25%, transparent));
   color: inherit;
   font: inherit;
   font-size: 1.25rem;
@@ -2034,7 +2039,7 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 }
 
 .sai-tl3uqxjd__chev:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--sai-tl3uqxjd-chev-bg-hover, color-mix(in srgb, currentColor 40%, transparent));
 }
 
 .sai-tl3uqxjd__chev:focus-visible {
@@ -2070,7 +2075,7 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 }
 
 .sai-tl3uqxjd__close:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--sai-tl3uqxjd-close-bg-hover, color-mix(in srgb, currentColor 10%, transparent));
 }
 
 .sai-tl3uqxjd__close:focus-visible {
@@ -2086,8 +2091,15 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   left: 50%;
   transform: translateX(-50%);
   padding: 0.375rem 0.625rem;
-  background: rgba(0, 0, 0, 0.9);
-  color: #ffffff;
+  /* Toast inverts the slide colors — uses theme fg/bg via the
+   * Spectrum design-token bridges so dark-themed merchants get a
+   * legible toast. Falls back to a near-opaque foreground-vs-background
+   * pairing for browsers without color-mix support. */
+  background: var(
+    --sai-tl3uqxjd-toast-bg,
+    color-mix(in srgb, var(--sai-color-fg, #121212) 90%, transparent)
+  );
+  color: var(--sai-tl3uqxjd-toast-fg, var(--sai-color-bg, #ffffff));
   border-radius: 3px;
   font-size: 0.8125rem;
   white-space: nowrap;
