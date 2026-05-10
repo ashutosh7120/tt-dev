@@ -2099,12 +2099,11 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
   padding: 0.375rem 0.625rem;
   /* Toast inverts the slide colors — uses theme fg/bg via the
    * Spectrum design-token bridges so dark-themed merchants get a
-   * legible toast. Falls back to a near-opaque foreground-vs-background
-   * pairing for browsers without color-mix support. */
-  background: var(
-    --sai-tl3uqxjd-toast-bg,
-    color-mix(in srgb, var(--sai-color-fg, #121212) 90%, transparent)
-  );
+   * legible toast. The bg is fully opaque (not color-mix'd) because
+   * the host's opacity transition + a low-alpha theme fg token would
+   * compound into a near-invisible result. Merchants can override
+   * either via the listed CSS variables. */
+  background: var(--sai-tl3uqxjd-toast-bg, var(--sai-color-fg, #121212));
   color: var(--sai-tl3uqxjd-toast-fg, var(--sai-color-bg, #ffffff));
   border-radius: 3px;
   font-size: 0.8125rem;
