@@ -156,16 +156,22 @@
         mailto, tel, or relative is replaced with a no-op fragment so a
         malicious or accidental `javascript:` value can't become a click
         XSS vector. The check is on the literal scheme prefix (text before
-        the first `:`); relative URLs have no colon and pass through.
+        the first `:`); relative URLs have no colon and pass through. The
+        `redirect_p2 != '//'` guard rejects protocol-relative URLs like
+        `//evil.com` which browsers resolve to the page's protocol and
+        would silently navigate visitors off-site.
       {%- endcomment -%}
       {%- assign redirect_safe = '' -%}
       {%- if slide.redirect_url != blank -%}
         {%- assign redirect_lower = slide.redirect_url | strip | downcase -%}
         {%- assign redirect_scheme = redirect_lower | split: ':' | first -%}
-        {%- if redirect_lower == redirect_scheme -%}
-          {%- assign redirect_safe = slide.redirect_url -%}
-        {%- elsif redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
-          {%- assign redirect_safe = slide.redirect_url -%}
+        {%- assign redirect_p2 = redirect_lower | slice: 0, 2 -%}
+        {%- if redirect_p2 != '//' -%}
+          {%- if redirect_lower == redirect_scheme -%}
+            {%- assign redirect_safe = slide.redirect_url -%}
+          {%- elsif redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
+            {%- assign redirect_safe = slide.redirect_url -%}
+          {%- endif -%}
         {%- endif -%}
       {%- endif -%}
 

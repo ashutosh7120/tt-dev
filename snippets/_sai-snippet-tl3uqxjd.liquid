@@ -104,29 +104,38 @@
 {%- endif -%}
 
 {%- comment -%}── Bar-level enum scrubbing — replace bogus values with sane defaults ──{%- endcomment -%}
-{%- assign rotation_seconds = content.rotation_seconds | default: 5 -%}
+{%- comment -%}
+  `| times: 1` forces numeric coercion so a string-valued input (from a
+  hand-edited JSON payload or a buggy Studio control) can't slip into the
+  inline `style=` attribute. Then clamp to the schema bounds — meta.json
+  declares min:3 max:60 here; the JS-side `_startRotation` clamps to 3 as
+  a belt-and-braces second gate.
+{%- endcomment -%}
+{%- assign rotation_seconds = content.rotation_seconds | default: 5 | times: 1 -%}
+{%- if rotation_seconds < 3 -%}{%- assign rotation_seconds = 3 -%}{%- endif -%}
+{%- if rotation_seconds > 60 -%}{%- assign rotation_seconds = 60 -%}{%- endif -%}
 
 {%- assign transition_type = content.transition_type | default: 'fade' -%}
 {%- if transition_type != 'fade' and transition_type != 'slide_push_horizontal' and transition_type != 'slide_push_vertical' -%}
   {%- assign transition_type = 'fade' -%}
 {%- endif -%}
 
-{%- assign transition_duration_ms = content.transition_duration_ms | default: 400 -%}
+{%- assign transition_duration_ms = content.transition_duration_ms | default: 400 | times: 1 -%}
+{%- if transition_duration_ms < 100 -%}{%- assign transition_duration_ms = 100 -%}{%- endif -%}
+{%- if transition_duration_ms > 2000 -%}{%- assign transition_duration_ms = 2000 -%}{%- endif -%}
 
 {%- assign scroll_behaviour = content.scroll_behaviour | default: 'static' -%}
 {%- if scroll_behaviour != 'static' and scroll_behaviour != 'sticky' and scroll_behaviour != 'show_on_scroll_up' -%}
   {%- assign scroll_behaviour = 'static' -%}
 {%- endif -%}
 
-{%- assign max_width = content.max_width | default: 0 -%}
-{%- if max_width != 0 and max_width < 0 -%}
-  {%- assign max_width = 0 -%}
-{%- endif -%}
+{%- assign max_width = content.max_width | default: 0 | times: 1 -%}
+{%- if max_width < 0 -%}{%- assign max_width = 0 -%}{%- endif -%}
+{%- if max_width > 2000 -%}{%- assign max_width = 2000 -%}{%- endif -%}
 
-{%- assign max_height = content.max_height | default: 0 -%}
-{%- if max_height != 0 and max_height < 0 -%}
-  {%- assign max_height = 0 -%}
-{%- endif -%}
+{%- assign max_height = content.max_height | default: 0 | times: 1 -%}
+{%- if max_height < 0 -%}{%- assign max_height = 0 -%}{%- endif -%}
+{%- if max_height > 400 -%}{%- assign max_height = 400 -%}{%- endif -%}
 
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
 {%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
@@ -151,6 +160,9 @@
       {%- assign title_1 = slide.title_1_text | default: '' -%}
       {%- assign title_2 = slide.title_2_text | default: '' -%}
       {%- assign cta_type = slide.cta_type | default: 'redirect' -%}
+      {%- if cta_type != 'redirect' and cta_type != 'promo_code' -%}
+        {%- assign cta_type = 'redirect' -%}
+      {%- endif -%}
       {%- assign cta_text = slide.cta_text | default: '' -%}
       {%- assign cta_url_raw = slide.cta_url | default: '' -%}
       {%- assign redirect_url_raw = slide.redirect_url | default: '' -%}
@@ -212,6 +224,27 @@
       {%- endif -%}
 
       {%- comment -%}
+        Asset URL allowlist — same shape as redirect/cta. `<img src>` and
+        `<video src>` happily fire requests to attacker-controlled origins
+        (`//evil.com/leak.png`) without execution, but that's still the
+        same off-site surface the redirect allowlist closes. `data:` and
+        `javascript:` URLs are also filtered out. Asset zone is suppressed
+        entirely when the URL doesn't pass.
+      {%- endcomment -%}
+      {%- assign asset_url_safe = '' -%}
+      {%- if asset_url != '' -%}
+        {%- assign a1 = asset_url | slice: 0, 1 -%}
+        {%- assign a2 = asset_url | slice: 0, 2 -%}
+        {%- assign a7 = asset_url | slice: 0, 7 -%}
+        {%- assign a8 = asset_url | slice: 0, 8 -%}
+        {%- if a2 != '//' -%}
+          {%- if a1 == '/' or a7 == 'http://' or a8 == 'https://' -%}
+            {%- assign asset_url_safe = asset_url -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+
+      {%- comment -%}
         Whether the CTA actually renders. Empty cta_text suppresses; redirect
         type without a safe url also suppresses (no destination = no button).
       {%- endcomment -%}
@@ -235,7 +268,7 @@
       {%- endif -%}
 
       {%- comment -%} Skip slides with nothing displayable at all. {%- endcomment -%}
-      {%- if asset_url == '' and has_titles == false and has_actions == false -%}
+      {%- if asset_url_safe == '' and has_titles == false and has_actions == false -%}
         {%- continue -%}
       {%- endif -%}
 
@@ -250,7 +283,7 @@
 
       {%- comment -%} Layout-collapse modifier classes (drives the 7-rule matrix). {%- endcomment -%}
       {%- assign mod_class = '' -%}
-      {%- if asset_url != '' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-asset' -%}{%- endif -%}
+      {%- if asset_url_safe != '' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-asset' -%}{%- endif -%}
       {%- if title_1 != '' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-title-1' -%}{%- endif -%}
       {%- if title_2 != '' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-title-2' -%}{%- endif -%}
       {%- if has_titles -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--has-titles' -%}{%- endif -%}
@@ -260,12 +293,38 @@
       {%- if slide_asset_size == 'full_width' -%}{%- assign mod_class = mod_class | append: ' sai-tl3uqxjd__slide--asset-full-width' -%}{%- endif -%}
 
       {%- comment -%}
-        Default to opaque white when missing / transparent / non-hex. A solid
-        slide background eliminates the cross-fade midpoint flicker.
+        Strict hex validation. The earlier weaker check (`bg_first == '#'`)
+        let attacks like `#ff0000;}body{...}` through — `| escape` does not
+        touch `;`, `{`, `}`, so they survived into the inline `style="…"`
+        attribute and injected CSS. Walk the body char-by-char and reject
+        anything outside [0-9a-f]; require length 3/4/6/8 (rgb / rgba /
+        rrggbb / rrggbbaa). Defaults to opaque white to eliminate cross-fade
+        midpoint flicker, also covers missing / transparent / malformed.
       {%- endcomment -%}
-      {%- assign slide_bg = slide.background_color | default: '' -%}
-      {%- assign bg_first = slide_bg | slice: 0, 1 -%}
-      {%- if slide_bg == '' or slide_bg == 'transparent' or bg_first != '#' -%}
+      {%- assign slide_bg_raw = slide.background_color | default: '' -%}
+      {%- assign bg_first = slide_bg_raw | slice: 0, 1 -%}
+      {%- assign bg_body = slide_bg_raw | slice: 1, 100 | downcase -%}
+      {%- assign bg_body_len = bg_body | size -%}
+      {%- assign bg_valid = false -%}
+      {%- if bg_first == '#' -%}
+        {%- if bg_body_len == 3 or bg_body_len == 4 or bg_body_len == 6 or bg_body_len == 8 -%}
+          {%- assign bg_valid = true -%}
+          {%- assign hex_chars = '0123456789abcdef' -%}
+          {%- for i in (0..7) -%}
+            {%- if i >= bg_body_len -%}
+              {%- break -%}
+            {%- endif -%}
+            {%- assign ch = bg_body | slice: i, 1 -%}
+            {%- unless hex_chars contains ch -%}
+              {%- assign bg_valid = false -%}
+              {%- break -%}
+            {%- endunless -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endif -%}
+      {%- if bg_valid -%}
+        {%- assign slide_bg = '#' | append: bg_body -%}
+      {%- else -%}
         {%- assign slide_bg = '#ffffff' -%}
       {%- endif -%}
 
@@ -325,19 +384,19 @@
            style="--sai-slide-bg: {{ slide_bg | escape }};">
       {%- endif -%}
 
-        {%- if asset_url != '' -%}
+        {%- if asset_url_safe != '' -%}
           <div class="sai-tl3uqxjd__zone-asset">
             {%- if is_video -%}
               <video class="sai-tl3uqxjd__asset"
-                     src="{{ asset_url | escape }}"
+                     src="{{ asset_url_safe | escape }}"
                      autoplay muted playsinline
                      {%- if asset_loop %} loop{% endif %}
-                     data-object-fit="{{ asset_object_fit }}"></video>
+                     data-object-fit="{{ asset_object_fit | escape }}"></video>
             {%- else -%}
               <img class="sai-tl3uqxjd__asset"
-                   src="{{ asset_url | escape }}"
+                   src="{{ asset_url_safe | escape }}"
                    loading="lazy"
-                   data-object-fit="{{ asset_object_fit }}"
+                   data-object-fit="{{ asset_object_fit | escape }}"
                    alt="{{ aria_label }}">
             {%- endif -%}
           </div>
@@ -359,18 +418,18 @@
             {%- if timer_end != '' -%}
               <span class="sai-tl3uqxjd__timer"
                     data-timer-end="{{ timer_end | escape }}"
-                    data-timer-format="{{ timer_format }}"
-                    data-timer-expiry="{{ timer_expiry }}"
+                    data-timer-format="{{ timer_format | escape }}"
+                    data-timer-expiry="{{ timer_expiry | escape }}"
                     aria-live="off"></span>
             {%- endif -%}
 
             {%- if has_cta -%}
               <button type="button"
                       class="sai-tl3uqxjd__cta"
-                      data-cta-type="{{ cta_type }}"
+                      data-cta-type="{{ cta_type | escape }}"
                       data-slide-index="{{ current_index }}"
                       {%- if cta_type == 'redirect' %} data-cta-url="{{ cta_url_safe | escape }}"{% endif %}
-                      {%- if cta_type == 'promo_code' %} data-promo-feedback="{{ cta_promo_feedback }}"{% endif %}>{{ cta_text }}</button>
+                      {%- if cta_type == 'promo_code' %} data-promo-feedback="{{ cta_promo_feedback | escape }}"{% endif %}>{{ cta_text | escape }}</button>
             {%- endif -%}
           </div>
         {%- endif -%}
@@ -405,14 +464,14 @@
   class="sai-tl3uqxjd sai-tl3uqxjd--scroll-{{ scroll_behaviour }}{% if single_slide %} sai-tl3uqxjd--single{% endif %} sai-tl3uqxjd--transition-{{ transition_type }}"
   data-auto-rotate="{% if auto_rotate %}true{% else %}false{% endif %}"
   data-rotation-seconds="{{ rotation_seconds }}"
-  data-transition-type="{{ transition_type }}"
+  data-transition-type="{{ transition_type | escape }}"
   data-transition-duration-ms="{{ transition_duration_ms }}"
   data-swipe-enabled="{% if swipe_enabled %}true{% else %}false{% endif %}"
   data-dismissable="{% if dismissable %}true{% else %}false{% endif %}"
-  data-scroll-behaviour="{{ scroll_behaviour }}"
+  data-scroll-behaviour="{{ scroll_behaviour | escape }}"
   data-max-width="{{ max_width }}"
   data-max-height="{{ max_height }}"
-  data-asset-object-fit="{{ asset_object_fit }}"
+  data-asset-object-fit="{{ asset_object_fit | escape }}"
   data-asset-loop="{% if asset_loop %}true{% else %}false{% endif %}"
   data-promo-copied-text="{{ promo_copied_text | escape }}"
   data-chevrons-enabled="{% if chevrons_enabled %}true{% else %}false{% endif %}"

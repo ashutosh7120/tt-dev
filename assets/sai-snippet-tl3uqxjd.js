@@ -89,23 +89,40 @@
    * Never mutates slides[] content; merchant edits to slides require
    * a fresh server render. Matches the ticker's contract.
    */
+  // Whitelists for client-side enum scrubbing in applyVariant — mirrors
+  // the Liquid-side scrub so a buggy Studio control can't slip junk into
+  // a data attribute.
+  const VALID_TRANSITION_TYPES = new Set(['fade', 'slide_push_horizontal', 'slide_push_vertical'])
+  const VALID_SCROLL_BEHAVIOURS = new Set(['static', 'sticky', 'show_on_scroll_up'])
+  const VALID_OBJECT_FITS = new Set(['cover', 'contain', 'fill', 'none'])
+
+  function clampNumber(value, min, max, fallback) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+    return Math.min(Math.max(value, min), max)
+  }
+
   function applyVariant(host, content) {
     if (content == null || typeof content !== 'object') return
+    let rotationChanged = false
     if (typeof content.auto_rotate === 'boolean') {
       host.setAttribute('data-auto-rotate', content.auto_rotate ? 'true' : 'false')
+      rotationChanged = true
     }
     if (typeof content.rotation_seconds === 'number') {
-      host.setAttribute('data-rotation-seconds', String(content.rotation_seconds))
+      const seconds = clampNumber(content.rotation_seconds, 3, 60, 5)
+      host.setAttribute('data-rotation-seconds', String(seconds))
+      rotationChanged = true
     }
-    if (typeof content.transition_type === 'string') {
+    if (
+      typeof content.transition_type === 'string' &&
+      VALID_TRANSITION_TYPES.has(content.transition_type)
+    ) {
       host.setAttribute('data-transition-type', content.transition_type)
     }
     if (typeof content.transition_duration_ms === 'number') {
-      host.setAttribute('data-transition-duration-ms', String(content.transition_duration_ms))
-      host.style.setProperty(
-        '--sai-tl3uqxjd-transition-duration',
-        `${content.transition_duration_ms}ms`,
-      )
+      const ms = clampNumber(content.transition_duration_ms, 100, 2000, 400)
+      host.setAttribute('data-transition-duration-ms', String(ms))
+      host.style.setProperty('--sai-tl3uqxjd-transition-duration', `${ms}ms`)
     }
     if (typeof content.swipe_enabled === 'boolean') {
       host.setAttribute('data-swipe-enabled', content.swipe_enabled ? 'true' : 'false')
@@ -113,26 +130,34 @@
     if (typeof content.dismissable === 'boolean') {
       host.setAttribute('data-dismissable', content.dismissable ? 'true' : 'false')
     }
-    if (typeof content.scroll_behaviour === 'string') {
+    if (
+      typeof content.scroll_behaviour === 'string' &&
+      VALID_SCROLL_BEHAVIOURS.has(content.scroll_behaviour)
+    ) {
       host.setAttribute('data-scroll-behaviour', content.scroll_behaviour)
     }
     if (typeof content.max_width === 'number') {
-      host.setAttribute('data-max-width', String(content.max_width))
-      if (content.max_width > 0) {
-        host.style.setProperty('--sai-tl3uqxjd-max-width', `${content.max_width}px`)
+      const mw = clampNumber(content.max_width, 0, 2000, 0)
+      host.setAttribute('data-max-width', String(mw))
+      if (mw > 0) {
+        host.style.setProperty('--sai-tl3uqxjd-max-width', `${mw}px`)
       } else {
         host.style.removeProperty('--sai-tl3uqxjd-max-width')
       }
     }
     if (typeof content.max_height === 'number') {
-      host.setAttribute('data-max-height', String(content.max_height))
-      if (content.max_height > 0) {
-        host.style.setProperty('--sai-tl3uqxjd-max-height', `${content.max_height}px`)
+      const mh = clampNumber(content.max_height, 0, 400, 0)
+      host.setAttribute('data-max-height', String(mh))
+      if (mh > 0) {
+        host.style.setProperty('--sai-tl3uqxjd-max-height', `${mh}px`)
       } else {
         host.style.removeProperty('--sai-tl3uqxjd-max-height')
       }
     }
-    if (typeof content.asset_object_fit === 'string') {
+    if (
+      typeof content.asset_object_fit === 'string' &&
+      VALID_OBJECT_FITS.has(content.asset_object_fit)
+    ) {
       host.setAttribute('data-asset-object-fit', content.asset_object_fit)
       const assets = host.querySelectorAll('.sai-tl3uqxjd__asset')
       for (const a of assets) a.setAttribute('data-object-fit', content.asset_object_fit)
@@ -170,8 +195,17 @@
   function writeDismissed(host) {
     try {
       window.sessionStorage.setItem(dismissKey(host), '1')
-    } catch (_e) {
-      /* graceful degradation — dismiss is per-page-load instead of per-session */
+      return true
+    } catch (e) {
+      // sessionStorage write can fail under Safari private mode, quota
+      // pressure, sandboxed iframes, etc. "Fail loud, never fake" — log a
+      // single console warn so a merchant chasing "users keep seeing
+      // dismissed bars" has something to triage.
+      console.warn(
+        '[announcement-bar-carousel] sessionStorage write failed; dismiss will not persist',
+        e,
+      )
+      return false
     }
   }
 
@@ -184,6 +218,9 @@
       this._slides = []
       this._countdowns = []
       this._rotationTimer = null
+      this._countdownPoll = null
+      this._goToTimer = null
+      this._expireTimer = null
       this._transitioning = false
       this._pendingTarget = null
       this._paused = false
@@ -282,11 +319,16 @@
         }
         slide.addEventListener(
           'click',
-          () => {
+          (e) => {
+            // CTA clicks fire `cta_*` events; close clicks fire `dismissed`.
+            // Skip the slide_click event for those so analytics don't
+            // double-count the user's intent.
+            if (e.target.closest('.sai-tl3uqxjd__cta')) return
+            if (e.target.closest('.sai-tl3uqxjd__close')) return
             const idx = Number(slide.getAttribute('data-slide-index'))
             const url = slide.getAttribute('href') || slide.getAttribute('data-redirect-url') || ''
             this._track?.('announcement_bar:slide_click', {
-              slide_index: idx,
+              slide_index: Number.isFinite(idx) ? idx : -1,
               redirect_url: url,
             })
           },
@@ -305,29 +347,81 @@
       const spectrumAi = window.__spectrumAi
       if (spectrumAi?.snippet && typeof spectrumAi.snippet.bind === 'function') {
         const handle = spectrumAi.snippet.bind(this, ({ variants, currentVariantId }) => {
-          // `variants` is an array of SnippetBindVariant; look up by id.
-          const variant =
-            Array.isArray(variants) && currentVariantId
-              ? variants.find((v) => v?.variantId === currentVariantId)
-              : null
-          if (variant?.content) applyVariant(this, variant.content)
+          // Boundary with third-party SDK code — wrap in try/catch so a
+          // malformed payload (variants shape drift, etc.) doesn't propagate
+          // up through bind's dispatch and break everything else on the page.
+          try {
+            // `variants` is an array of SnippetBindVariant; look up by id.
+            const variant =
+              Array.isArray(variants) && currentVariantId
+                ? variants.find((v) => v?.variantId === currentVariantId)
+                : null
+            if (variant?.content) {
+              applyVariant(this, variant.content)
+              // Rotation interval is captured at setInterval-time, so a live
+              // edit to auto_rotate / rotation_seconds via Studio doesn't take
+              // effect until the next page load unless we tear down + restart.
+              const hadRotation =
+                'auto_rotate' in variant.content || 'rotation_seconds' in variant.content
+              if (hadRotation) {
+                this._stopRotation()
+                if (readBool(this, 'data-auto-rotate', true) && this._slides.length > 1) {
+                  this._startRotation()
+                }
+              }
+            }
+          } catch (err) {
+            console.error('[announcement-bar-carousel] Variant binding failed', err)
+            this._track?.('announcement_bar:variant_bind_failed', {
+              error: String(err?.message ?? err),
+            })
+          }
         })
-        this._track = handle && typeof handle.track === 'function' ? handle.track : null
+        if (handle && typeof handle.track === 'function') {
+          this._track = handle.track
+        } else {
+          console.warn(
+            '[announcement-bar-carousel] Bootstrap SDK returned handle without track(); analytics disabled',
+          )
+          this._track = null
+        }
+      } else {
+        // Bootstrap SDK missing entirely — most likely the artifacts loader
+        // failed (CSP / ad-blocker / loader regression). The bar still
+        // renders the default variant, but variants + analytics are gone.
+        // Fail loud so a merchant has something to triage.
+        console.error(
+          '[announcement-bar-carousel] window.__spectrumAi.snippet.bind unavailable; analytics + runtime variants disabled',
+        )
       }
     }
 
     disconnectedCallback() {
       this._stopRotation()
-      if (this._countdownPoll !== null && this._countdownPoll !== undefined) {
+      if (this._countdownPoll !== null) {
         window.clearInterval(this._countdownPoll)
         this._countdownPoll = null
+      }
+      if (this._goToTimer !== null) {
+        window.clearTimeout(this._goToTimer)
+        this._goToTimer = null
+      }
+      if (this._expireTimer !== null) {
+        window.clearTimeout(this._expireTimer)
+        this._expireTimer = null
       }
       if (this._abortController) {
         this._abortController.abort()
         this._abortController = null
       }
       for (const c of this._countdowns) {
-        if (c?.instance) c.instance.destroy()
+        if (c?.instance) {
+          try {
+            c.instance.destroy()
+          } catch (err) {
+            console.warn('[announcement-bar-carousel] Countdown destroy failed', err)
+          }
+        }
       }
       this._countdowns = []
       if (this._intersectionObserver) {
@@ -339,6 +433,15 @@
         this._toastTimer = null
       }
       this._pauseAllVideos()
+      // Reset transient state so a future re-init (HMR / Studio iframe
+      // reload) doesn't read leftover values.
+      this._slides = []
+      this._currentIndex = 0
+      this._transitioning = false
+      this._pendingTarget = null
+      this._paused = false
+      this._seenSlideViews.clear()
+      this._track = null
     }
 
     /* ────────── Rotation ────────── */
@@ -350,8 +453,17 @@
         if (this._paused || this._transitioning) return
         const total = this._slides.length
         if (total <= 1) return
-        const next = (this._currentIndex + 1) % total
-        this.goTo(next, 'auto')
+        // Walk forward over expired-via-timer slides so the bar doesn't sit
+        // for `rotation_seconds` on a hidden+inert slide showing the bg.
+        let next = -1
+        for (let step = 1; step <= total; step++) {
+          const candidate = (this._currentIndex + step) % total
+          if (!this._slides[candidate].dataset.expired) {
+            next = candidate
+            break
+          }
+        }
+        if (next >= 0 && next !== this._currentIndex) this.goTo(next, 'auto')
       }, ms)
     }
 
@@ -378,7 +490,27 @@
         for (const v of videos) {
           if (idx === this._currentIndex) {
             const p = v.play()
-            if (p && typeof p.catch === 'function') p.catch(() => {})
+            if (p && typeof p.catch === 'function') {
+              p.catch((err) => {
+                // NotAllowedError is the autoplay policy ("user gesture
+                // required") — expected on most browsers, swallow silently.
+                // Anything else (NotSupportedError, AbortError, MediaError,
+                // decode/CORS failure) means the merchant's video URL is
+                // broken — surface it.
+                if (err && err.name === 'NotAllowedError') return
+                console.warn('[announcement-bar-carousel] Video play failed', {
+                  src: v.currentSrc,
+                  slide_index: idx,
+                  error_name: err?.name,
+                  error_message: err?.message,
+                })
+                this._track?.('announcement_bar:video_play_failed', {
+                  slide_index: idx,
+                  src: v.currentSrc,
+                  error_name: err?.name ?? 'unknown',
+                })
+              })
+            }
           } else {
             v.pause()
           }
@@ -431,7 +563,12 @@
       }
 
       const duration = readNumber(this, 'data-transition-duration-ms', 400)
-      window.setTimeout(() => {
+      this._goToTimer = window.setTimeout(() => {
+        this._goToTimer = null
+        // disconnectedCallback may have run while we were mid-transition;
+        // operating on detached DOM leaks work and can resurrect video
+        // state on a node nobody can see.
+        if (!this.isConnected) return
         fromSlide.setAttribute('data-state', 'hidden')
         fromSlide.setAttribute('inert', '')
         toSlide.setAttribute('data-state', 'current')
@@ -458,8 +595,12 @@
      * the carousel script (loaded `async`) beats the SDK script (loaded
      * `defer`), we poll for up to 5 seconds and then run setup. Without this
      * wait, every timer element would be silently removed on fast cold loads.
+     * Returns early when no timer elements are present so a carousel with
+     * zero timers doesn't burn 100 setInterval ticks waiting for an SDK it
+     * doesn't need.
      */
     _setupCountdowns() {
+      if (this.querySelectorAll('.sai-tl3uqxjd__timer').length === 0) return
       const ctor = window.Spectrum?.Countdown
       if (ctor) {
         this._setupCountdownsWith(ctor)
@@ -467,17 +608,25 @@
       }
       const start = Date.now()
       this._countdownPoll = window.setInterval(() => {
+        // disconnectedCallback aborts the controller; the setInterval
+        // callback may still be queued from before the disconnect — bail
+        // so we don't operate on detached DOM.
+        if (!this.isConnected || this._abortController?.signal.aborted) {
+          window.clearInterval(this._countdownPoll)
+          this._countdownPoll = null
+          return
+        }
         const ready = window.Spectrum?.Countdown
         if (ready) {
           window.clearInterval(this._countdownPoll)
           this._countdownPoll = null
-          if (this.isConnected) this._setupCountdownsWith(ready)
+          this._setupCountdownsWith(ready)
           return
         }
         if (Date.now() - start >= 5000) {
           window.clearInterval(this._countdownPoll)
           this._countdownPoll = null
-          if (this.isConnected) this._setupCountdownsWith(null)
+          this._setupCountdownsWith(null)
         }
       }, 50)
     }
@@ -495,12 +644,21 @@
         const endsAt = parseEpoch(isoEnd)
 
         if (!Countdown || endsAt === null) {
+          const reason = !Countdown ? 'sdk_unavailable' : 'invalid_end'
           console.warn(
             `[announcement-bar-carousel] Skipping timer on slide ${slideIdx}: ${
               !Countdown ? 'Spectrum.Countdown unavailable' : 'invalid timer_end'
             }`,
           )
+          // Surface to analytics — merchant deploys a countdown, it silently
+          // vanishes from prod, they have no diagnostic without telemetry.
+          this._track?.('announcement_bar:timer_skipped', {
+            slide_index: slideIdx,
+            reason,
+            raw_end: isoEnd,
+          })
           timerEl.remove()
+          // Push null to keep array dense by index for positional lookup.
           this._countdowns.push(null)
           continue
         }
@@ -559,16 +717,28 @@
         // Inline transition — calling goTo would overwrite the expired
         // slide's data-state="hidden" with "leaving" first. We want the
         // expired slide to stay visibly hidden+inert+expired immediately
-        // and just bring the next live slide in.
-        const next = livePool[0]
-        const nextIdx = Number(next.getAttribute('data-slide-index'))
-        if (Number.isFinite(nextIdx) && this._slides[nextIdx]) {
+        // and just bring the next live slide in. Walk forward from the
+        // expired slide so the bar advances in the natural direction
+        // (livePool[0] could be BEFORE the current index → bar jumps
+        // backwards).
+        const total = this._slides.length
+        let nextIdx = -1
+        for (let step = 1; step <= total; step++) {
+          const candidate = (slideIdx + step) % total
+          if (!this._slides[candidate].dataset.expired) {
+            nextIdx = candidate
+            break
+          }
+        }
+        if (nextIdx >= 0) {
           const targetSlide = this._slides[nextIdx]
           targetSlide.setAttribute('data-state', 'entering')
           targetSlide.removeAttribute('inert')
 
           const duration = readNumber(this, 'data-transition-duration-ms', 400)
-          window.setTimeout(() => {
+          this._expireTimer = window.setTimeout(() => {
+            this._expireTimer = null
+            if (!this.isConnected) return
             targetSlide.setAttribute('data-state', 'current')
             this._currentIndex = nextIdx
             this._setVideoPlayState()
@@ -588,8 +758,22 @@
       const slideIdx = Number(btn.getAttribute('data-slide-index'))
 
       if (ctaType === 'redirect') {
-        const url = validateUrl(btn.getAttribute('data-cta-url'))
-        if (url) window.location.href = url
+        const raw = btn.getAttribute('data-cta-url')
+        const url = validateUrl(raw)
+        if (url) {
+          window.location.href = url
+          return
+        }
+        // Allowlist rejected the merchant URL — surface so a stuck CTA
+        // ("button does nothing") has a diagnostic.
+        console.warn('[announcement-bar-carousel] CTA URL rejected by allowlist', {
+          raw_url: raw,
+          slide_index: slideIdx,
+        })
+        this._track?.('announcement_bar:cta_url_rejected', {
+          slide_index: slideIdx,
+          raw_url: raw,
+        })
         return
       }
 
@@ -622,7 +806,16 @@
             this._showToast(copiedText)
           }
         },
-        () => {
+        (err) => {
+          // Clipboard API can fail on HTTP origins, sandboxed iframes,
+          // permission-blocked, very old browsers. The toast surfaces to
+          // the user; the warn + telemetry surface to the merchant.
+          console.warn('[announcement-bar-carousel] Clipboard write failed', err)
+          this._track?.('announcement_bar:promo_copy_failed', {
+            slide_index: slideIdx,
+            code,
+            error_name: err?.name ?? 'unknown',
+          })
           this._showToast(`Couldn't copy. Code: ${code}`)
         },
       )
@@ -648,8 +841,23 @@
     _handleSlideClick(e, slide) {
       if (e.target.closest('.sai-tl3uqxjd__cta')) return
       if (e.target.closest('.sai-tl3uqxjd__close')) return
-      const url = validateUrl(slide.getAttribute('data-redirect-url'))
-      if (url) window.location.href = url
+      const raw = slide.getAttribute('data-redirect-url')
+      const url = validateUrl(raw)
+      if (url) {
+        window.location.href = url
+        return
+      }
+      // Allowlist rejected the merchant URL — surface so a stuck slide
+      // ("background click does nothing") has a diagnostic.
+      const idx = Number(slide.getAttribute('data-slide-index'))
+      console.warn('[announcement-bar-carousel] Slide redirect URL rejected by allowlist', {
+        raw_url: raw,
+        slide_index: idx,
+      })
+      this._track?.('announcement_bar:slide_url_rejected', {
+        slide_index: Number.isFinite(idx) ? idx : -1,
+        raw_url: raw,
+      })
     }
 
     /* ────────── Swipe (axis-dominance gate, amendment 6) ────────── */
