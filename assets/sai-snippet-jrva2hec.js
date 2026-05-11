@@ -329,32 +329,54 @@
     }
   }
 
+  function activate(node, snippetApi) {
+    const handle = activateContainer(node, snippetApi)
+    if (!handle || typeof handle.teardown !== 'function') return
+
+    // Wire to the SDK if available; otherwise the bar runs without analytics
+    // and without runtime variant resolution (SSR is enough for both).
+    if (snippetApi && typeof snippetApi.bind === 'function') {
+      const bound = snippetApi.bind(node, ({ variants, currentVariantId }) => {
+        const variant = variants.find((v) => v.variantId === currentVariantId)
+        if (!variant || !variant.content) return
+        applyVariant(node, variant.content)
+        // applyVariant only updates the data attribute; setDuration reads
+        // it live, so re-running here lets `ticker_seconds` changes take
+        // effect on variant switch without a page reload.
+        handle.refreshDuration()
+      })
+      if (bound && typeof bound.track === 'function') {
+        handle.setTrackHandle(bound.track)
+      }
+    }
+  }
+
   function init() {
     const containers = document.querySelectorAll(
       `[data-spectrum-instance-id][data-spectrum-snippet-id="${SNIPPET_ID}"]`,
     )
     const snippetApi = window.__spectrumAi?.snippet
 
+    // Per snippet-library convention, defer setup until the wrapper's
+    // vis-gate flips to "on". For SSR-visible bars this is immediate; for
+    // bars hidden by the SDK pending variant resolution, we wait for the
+    // SDK to remove the `off` value rather than running animation /
+    // observer setup against a `display:none` container.
     for (const node of containers) {
-      const handle = activateContainer(node, snippetApi)
-      if (!handle || typeof handle.teardown !== 'function') continue
-
-      // Wire to the SDK if available; otherwise the bar runs without analytics
-      // and without runtime variant resolution (SSR is enough for both).
-      if (snippetApi && typeof snippetApi.bind === 'function') {
-        const bound = snippetApi.bind(node, ({ variants, currentVariantId }) => {
-          const variant = variants.find((v) => v.variantId === currentVariantId)
-          if (!variant || !variant.content) return
-          applyVariant(node, variant.content)
-          // applyVariant only updates the data attribute; setDuration reads
-          // it live, so re-running here lets `ticker_seconds` changes take
-          // effect on variant switch without a page reload.
-          handle.refreshDuration()
+      if (node.getAttribute('data-spectrum-vis') === 'off') {
+        const observer = new MutationObserver((records) => {
+          for (const record of records) {
+            if (record.attributeName !== 'data-spectrum-vis') continue
+            if (node.getAttribute('data-spectrum-vis') === 'off') continue
+            observer.disconnect()
+            activate(node, snippetApi)
+            return
+          }
         })
-        if (bound && typeof bound.track === 'function') {
-          handle.setTrackHandle(bound.track)
-        }
+        observer.observe(node, { attributes: true, attributeFilter: ['data-spectrum-vis'] })
+        continue
       }
+      activate(node, snippetApi)
     }
   }
 
