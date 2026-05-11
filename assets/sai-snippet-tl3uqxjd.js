@@ -229,6 +229,7 @@
       this._intersectionObserver = null
       this._seenSlideViews = new Set()
       this._barInView = false
+      this._toast = null
       this._toastTimer = null
     }
 
@@ -433,6 +434,12 @@
         window.clearTimeout(this._toastTimer)
         this._toastTimer = null
       }
+      // Toast lives in document.body — must be explicitly removed; the
+      // AbortController teardown doesn't reach it.
+      if (this._toast && this._toast.isConnected) {
+        this._toast.remove()
+      }
+      this._toast = null
       this._pauseAllVideos()
       // Reset transient state so a future re-init (HMR / Studio iframe
       // reload) doesn't read leftover values.
@@ -848,13 +855,25 @@
     }
 
     _showToast(text) {
-      let toast = this.querySelector('.sai-tl3uqxjd__toast')
-      if (!toast) {
+      // Append to document.body — NOT this host — so the toast escapes:
+      //   (a) the host's `overflow: hidden` (which clips rail transitions),
+      //   (b) the host's `transform: translateY(...)` in show_on_scroll_up
+      //       mode, which would otherwise become a containing block for any
+      //       `position: fixed` descendants and re-trap the toast.
+      // The element keeps the `sai-tl3uqxjd__toast` class so the aggregate
+      // CSS still styles it. Track the reference so disconnectedCallback
+      // can remove it (preventing orphan toasts on Studio iframe reloads).
+      let toast = this._toast
+      if (!toast || !toast.isConnected) {
         toast = document.createElement('div')
         toast.className = 'sai-tl3uqxjd__toast'
-        this.appendChild(toast)
+        document.body.appendChild(toast)
+        this._toast = toast
       }
       toast.textContent = text
+      // Force a layout flush so the `--visible` class transition fires
+      // even when the element was just created (otherwise the browser
+      // batches both the insert and the class add into one paint).
       void toast.offsetWidth
       toast.classList.add('sai-tl3uqxjd__toast--visible')
       if (this._toastTimer !== null) window.clearTimeout(this._toastTimer)

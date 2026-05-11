@@ -2085,33 +2085,42 @@ a.sai-ibx7zk9p[href]:hover .sai-ibx7zk9p__image {
 
 /* ───────── Toast (rendered by JS for promo-copied feedback) ───────── */
 
-/* Centered INSIDE the host bounds because the host has `overflow: hidden`
- * to clip rail transitions — a toast positioned above/below the host (the
- * conventional placement) would be invisible. Sits 8px from the right
- * edge of the content area (using the same max-width offset as chevrons /
- * close so it lines up with the centred content cap). Vertical-centered
- * via top: 50% + translateY(-50%) so it works regardless of bar height. */
+/* Standard snackbar-style toast: fixed at the bottom-center of the
+ * viewport, NOT inside the host. Reasons:
+ *   - Host has `overflow: hidden` to clip rail transitions; an in-host
+ *     toast positioned above/below the host gets clipped invisible.
+ *   - In `scroll_behaviour: show_on_scroll_up` mode the host itself
+ *     carries `transform: translateY(...)`, which creates a containing
+ *     block for fixed-positioned descendants — even `position: fixed`
+ *     on an in-host toast would be confined to the host's bbox.
+ *
+ * JS reparents the element to `document.body` (see `_showToast`) so it
+ * escapes both constraints. The element keeps its `sai-tl3uqxjd__toast`
+ * class so the snippet-library aggregate CSS still styles it. */
 .sai-tl3uqxjd__toast {
-  position: absolute;
-  top: 50%;
-  right: calc(max(0px, (100% - var(--sai-tl3uqxjd-max-width, 100%)) / 2) + 44px);
-  transform: translateY(-50%);
-  padding: 0.375rem 0.625rem;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5rem 0.875rem;
   /* Toast inverts the slide colors — uses theme fg/bg via the
    * Spectrum design-token bridges so dark-themed merchants get a
-   * legible toast. The bg is fully opaque (not color-mix'd) because
-   * the host's opacity transition + a low-alpha theme fg token would
-   * compound into a near-invisible result. Merchants can override
-   * either via the listed CSS variables. */
+   * legible toast. Opaque bg (no color-mix multiplier) so the
+   * host's opacity transition + a low-alpha theme fg token can't
+   * compound into a near-invisible result. */
   background: var(--sai-tl3uqxjd-toast-bg, var(--sai-color-fg, #121212));
   color: var(--sai-tl3uqxjd-toast-fg, var(--sai-color-bg, #ffffff));
-  border-radius: 3px;
-  font-size: 0.8125rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 200ms ease;
-  z-index: 10;
+  transition: opacity 200ms ease, transform 200ms ease;
+  /* High z-index because the toast now lives in document.body and may
+   * need to stack above merchant theme modals, cookie banners, etc. */
+  z-index: 99999;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
 
 .sai-tl3uqxjd__toast--visible {
