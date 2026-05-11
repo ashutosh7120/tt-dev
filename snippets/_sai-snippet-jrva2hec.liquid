@@ -1,0 +1,249 @@
+{%- comment -%}
+  Announcement Bar - Ticker. Horizontal-scrolling marquee with an unbounded
+  list of slides held in a single JSON-typed prop.
+
+  Wrapper contract (per docs/tech/studio-liquid-snippets.md "Library Snippets"):
+    - variant            : default variant from mo.variants.value.variants
+    - mo                 : spectrum_snippet_instance metaobject drop
+    - mutation_handle    : 'mut-{instanceId}' (consumed by wrapper outer div)
+    - experience_handle  : (consumed by wrapper outer div)
+
+  variant.content fields:
+    - ticker_seconds     number   Seconds for one viewport-width of slide
+                                  content to scroll past. Pixel speed stays
+                                  constant regardless of total slide count.
+    - pause_on_hover     boolean  Pause animation while hover/focus is active.
+    - scroll_behaviour   string   'static' | 'sticky' | 'show_on_scroll_up'
+    - asset_object_fit   string   'cover' | 'contain' | 'fill' | 'none'
+    - asset_loop         boolean  Maps to <video loop>; no-op for <img>.
+    - slides             array    [{ title_text, asset_url, asset_position,
+                                  background_color, redirect_url }]
+
+  Slide field semantics:
+    - title_text         string   Inline HTML allowed; rendered without
+                                  | escape. Same trust boundary as theme
+                                  settings — merchants can author rich
+                                  text including <strong>/<em>/<a>.
+    - asset_url          string   CDN URL string. Render branches on the
+                                  real file extension (path-stripped of
+                                  query string and hash, last dot-segment):
+                                  mp4 / webm / mov produce <video>;
+                                  everything else produces <img>. Emitted
+                                  through | escape into HTML attributes.
+                                  Slides with empty asset_url AND empty
+                                  title_text are skipped.
+    - asset_position     string   'leading' | 'trailing' | 'background'.
+                                  Drives a CSS modifier on the slide. Falls
+                                  back to 'leading' when missing/invalid.
+    - background_color   string   Hex / CSS colour. Becomes inline
+                                  --sai-slide-bg on the slide wrapper,
+                                  emitted through | escape. Falls back to
+                                  transparent.
+    - redirect_url       string   Optional. The slide is always emitted as
+                                  <a>; href is set only when present
+                                  (element-stability rule). Schemes are
+                                  restricted to http/https/mailto/tel and
+                                  relative URLs — javascript:/data:/etc.
+                                  are dropped to prevent click XSS.
+
+  Seamless loop technique: the inner track contains TWO copies of the slide
+  list. CSS animates the track from translateX(0) to translateX(-50%). At
+  -50% the track has scrolled exactly one copy's width, so Copy 2 sits
+  where Copy 1 started. The keyframe loop snap is invisible. Without two
+  copies, a single sweep would leave an empty trailing edge.
+{%- endcomment -%}
+
+<script src="{{ 'sai-snippet-jrva2hec.js' | asset_url }}" async></script>
+
+{%- assign content = variant.content -%}
+
+{%- comment -%}── Bar-level defaults (boolean default gotcha: == nil, not | default:) ──{%- endcomment -%}
+{%- if content.pause_on_hover == nil -%}
+  {%- assign pause_on_hover = true -%}
+{%- else -%}
+  {%- assign pause_on_hover = content.pause_on_hover -%}
+{%- endif -%}
+
+{%- if content.asset_loop == nil -%}
+  {%- assign asset_loop = true -%}
+{%- else -%}
+  {%- assign asset_loop = content.asset_loop -%}
+{%- endif -%}
+
+{%- assign ticker_seconds = content.ticker_seconds | default: 30 -%}
+{%- assign scroll_behaviour = content.scroll_behaviour | default: 'static' -%}
+{%- if scroll_behaviour != 'static' and scroll_behaviour != 'sticky' and scroll_behaviour != 'show_on_scroll_up' -%}
+  {%- assign scroll_behaviour = 'static' -%}
+{%- endif -%}
+
+{%- comment -%}
+  Map the prop value to the CSS class suffix. CSS uses `--scroll-show-up`
+  (hyphenated) and the JS `applyVariant` adds the same hyphenated form;
+  emitting the raw underscored value here would yield a class with no
+  matching CSS rule and the bar would render unpositioned on initial load.
+{%- endcomment -%}
+{%- assign scroll_class = scroll_behaviour -%}
+{%- if scroll_behaviour == 'show_on_scroll_up' -%}
+  {%- assign scroll_class = 'show-up' -%}
+{%- endif -%}
+
+{%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
+{%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
+  {%- assign asset_object_fit = 'cover' -%}
+{%- endif -%}
+
+{%- comment -%}
+  Render enough slide copies at SSR to fill ~one viewport without depending
+  on JS-driven cloning. fillCopiesToViewport in the JS stays as a safety net
+  for ultra-wide screens or abnormally narrow slide content. Without this,
+  the bar paints with slides clustered on the left and visibly "spreads"
+  out as JS clones run a frame later.
+
+  Target ~8 slides per copy at SSR (~1600–2400 px assuming typical slide
+  widths), which covers desktops up to 1920 px without needing JS. The
+  multiplier is per-instance: 1 source slide → 8 repeats; 8 source slides
+  → 1 repeat. Same target either way.
+{%- endcomment -%}
+{%- assign ssr_target_slides = 8 -%}
+{%- assign ssr_source_count = content.slides.size | default: 1 -%}
+{%- if ssr_source_count < 1 -%}
+  {%- assign ssr_source_count = 1 -%}
+{%- endif -%}
+{%- assign ssr_repeats = ssr_target_slides | divided_by: ssr_source_count -%}
+{%- if ssr_repeats < 1 -%}
+  {%- assign ssr_repeats = 1 -%}
+{%- endif -%}
+
+{%- comment -%}── Capture the slide list once; emit twice for the seamless loop. ──{%- endcomment -%}
+{%- assign rendered_count = 0 -%}
+{%- capture slides_html -%}
+  {%- if content.slides -%}
+    {%- for _ssr_repeat in (1..ssr_repeats) -%}
+    {%- for slide in content.slides -%}
+      {%- assign asset_url = slide.asset_url | default: '' -%}
+      {%- assign title_text = slide.title_text | default: '' -%}
+
+      {%- comment -%} Skip empty slides — both fields blank means no content to render. {%- endcomment -%}
+      {%- if asset_url == '' and title_text == '' -%}
+        {%- continue -%}
+      {%- endif -%}
+
+      {%- assign rendered_count = rendered_count | plus: 1 -%}
+
+      {%- comment -%}
+        Asset render branch — extract the real file extension before
+        deciding video vs img. A bare `contains` substring match misroutes
+        URLs whose query string or path incidentally contains '.mp4' /
+        '.webm' / '.mov' (e.g. `cdn.example.com/foo.jpg?ref=video.mp4`).
+      {%- endcomment -%}
+      {%- assign asset_path = asset_url | split: '?' | first | split: '#' | first -%}
+      {%- assign asset_ext = asset_path | split: '.' | last | downcase -%}
+      {%- assign is_video = false -%}
+      {%- if asset_ext == 'mp4' or asset_ext == 'webm' or asset_ext == 'mov' -%}
+        {%- assign is_video = true -%}
+      {%- endif -%}
+
+      {%- assign asset_position = slide.asset_position | default: 'leading' -%}
+      {%- if asset_position != 'leading' and asset_position != 'trailing' and asset_position != 'background' -%}
+        {%- assign asset_position = 'leading' -%}
+      {%- endif -%}
+
+      {%- assign slide_bg = slide.background_color | default: 'transparent' -%}
+      {%- assign slide_index = forloop.index0 -%}
+
+      {%- comment -%}
+        Drop unsafe URL schemes from `redirect_url`. Anything not http(s),
+        mailto, tel, or relative is replaced with a no-op fragment so a
+        malicious or accidental `javascript:` value can't become a click
+        XSS vector. The check is on the literal scheme prefix (text before
+        the first `:`); relative URLs have no colon and pass through. The
+        `redirect_p2 != '//'` guard rejects protocol-relative URLs like
+        `//evil.com` which browsers resolve to the page's protocol and
+        would silently navigate visitors off-site.
+      {%- endcomment -%}
+      {%- assign redirect_safe = '' -%}
+      {%- if slide.redirect_url != blank -%}
+        {%- assign redirect_lower = slide.redirect_url | strip | downcase -%}
+        {%- assign redirect_scheme = redirect_lower | split: ':' | first -%}
+        {%- assign redirect_p2 = redirect_lower | slice: 0, 2 -%}
+        {%- if redirect_p2 != '//' -%}
+          {%- if redirect_lower == redirect_scheme -%}
+            {%- assign redirect_safe = slide.redirect_url -%}
+          {%- elsif redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
+            {%- assign redirect_safe = slide.redirect_url -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endif -%}
+
+      <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-{{ asset_position }}"
+         data-slide-index="{{ slide_index }}"
+         {%- if redirect_safe != '' %} href="{{ redirect_safe | escape }}"{% else %} aria-disabled="true"{% endif %}
+         style="--sai-slide-bg: {{ slide_bg | escape }};">
+        {%- if asset_url != '' -%}
+          {%- if is_video -%}
+            {%- comment -%}
+              Videos in an announcement bar are always above the fold and
+              autoplay-muted — preload="auto" tells the browser to fetch
+              the bytes eagerly so playback starts without a visible gap.
+              Default would be "metadata" (just enough for autoplay
+              decision), which leaves the video frame blank for several
+              hundred ms while it streams the remaining bytes.
+            {%- endcomment -%}
+            <video class="sai-jrva2hec__asset"
+                   src="{{ asset_url | escape }}"
+                   autoplay muted playsinline preload="auto"
+                   {%- if asset_loop %} loop{% endif %}
+                   data-object-fit="{{ asset_object_fit }}"></video>
+          {%- else -%}
+            {%- comment -%}
+              The bar is always above the fold, so lazy loading is the
+              wrong default — it'd defer the network request and the
+              slide paints with a broken-image gap until it loads.
+              `loading="eager"` (the HTML default) starts the request
+              immediately and `fetchpriority="high"` puts it ahead of
+              below-the-fold theme images in the priority queue.
+              `decoding="async"` lets the browser decode off the main
+              thread once bytes arrive.
+            {%- endcomment -%}
+            <img class="sai-jrva2hec__asset"
+                 src="{{ asset_url | escape }}"
+                 loading="eager"
+                 fetchpriority="high"
+                 decoding="async"
+                 data-object-fit="{{ asset_object_fit }}"
+                 alt="{{ title_text | strip_html | truncate: 80 | escape }}">
+          {%- endif -%}
+        {%- endif -%}
+        <span class="sai-jrva2hec__title">{{ title_text }}</span>
+      </a>
+    {%- endfor -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endcapture -%}
+
+{%- if rendered_count > 0 -%}
+<sai-jrva2hec
+  class="sai-jrva2hec sai-jrva2hec--scroll-{{ scroll_class }}"
+  data-ticker-seconds="{{ ticker_seconds }}"
+  data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}"
+  data-scroll-behaviour="{{ scroll_behaviour }}"
+  data-rendered-count="{{ rendered_count }}"
+  aria-roledescription="ticker"
+  aria-label="Announcement bar"
+>
+  <div class="sai-jrva2hec__viewport">
+    <div class="sai-jrva2hec__track" data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}">
+      <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
+      {%- comment -%}
+        Visual duplicate for the marquee loop. `aria-hidden` alone doesn't
+        take the inner <a>s out of the tab order — `inert` (HTML 5.2+) does
+        both: hides from AT AND removes from sequential focus navigation.
+        Keyboard users would otherwise hit every link twice. Falls back to
+        the same semantics on browsers that ignore inert because aria-hidden
+        is still set (WCAG 2.4.3 / 4.1.2).
+      {%- endcomment -%}
+      <div class="sai-jrva2hec__track-copy" aria-hidden="true" inert>{{ slides_html }}</div>
+    </div>
+  </div>
+</sai-jrva2hec>
+{%- endif -%}
