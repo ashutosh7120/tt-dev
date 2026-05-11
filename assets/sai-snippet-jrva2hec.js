@@ -1,8 +1,8 @@
 /**
  * Announcement Bar - Ticker (jrva2hec) snippet-author runtime.
  *
- * Drives the marquee animation duration, scroll-mode behaviours, and pause
- * gestures for each `[data-spectrum-instance-id][data-spectrum-snippet-id="jrva2hec"]`
+ * Drives the marquee animation duration and pause gestures for each
+ * `[data-spectrum-instance-id][data-spectrum-snippet-id="jrva2hec"]`
  * container on the page.
  *
  * Animation itself is CSS — `@keyframes sai-jrva2hec-marquee` translates the
@@ -10,6 +10,10 @@
  * runs the animation; this module only sets the duration value (so pixel
  * speed stays constant regardless of total slide width) and pauses on
  * gesture / focus / reduced-motion.
+ *
+ * Positioning is intentionally not a snippet concern. The host renders in
+ * normal flow; whichever section / template places the bar decides whether
+ * to wrap it in a sticky / fixed container.
  *
  * applyVariant updates DOM attributes and classes for bar-level scalars on
  * every variant resolution. Downstream effects vary:
@@ -26,20 +30,14 @@
  *                            touch listeners however are wired once at init
  *                            based on the initial value — flipping this at
  *                            runtime won't add or remove those listeners.
- *   - `scroll_behaviour`   → swaps the host's CSS modifier class. The body
- *                            CSS-var setter and the show-on-scroll-up
- *                            scroll listener are wired once at init based
- *                            on the initial mode — switching modes at
- *                            runtime won't reconfigure them. Page reload
- *                            required to fully change modes.
  *
  * Slide content (the JSON array) is server-rendered and not mutable here —
  * a variant rule that changes slide text or assets requires a fresh page
  * render.
  *
  * Test surface: when `globalThis.__SAI_TEST_HARNESS__ === true`, exposes
- * `globalThis.__saiJrva2hec` with `{ applyVariant, computeDuration,
- * extractScrollDirection }` for unit tests.
+ * `globalThis.__saiJrva2hec` with `{ applyVariant, computeDuration }` for
+ * unit tests.
  */
 ;(() => {
   const SNIPPET_ID = 'jrva2hec'
@@ -47,8 +45,7 @@
   const TRACK_SELECTOR = `.sai-${SNIPPET_ID}__track`
   const VIEWPORT_SELECTOR = `.sai-${SNIPPET_ID}__viewport`
   const COPY_SELECTOR = `.sai-${SNIPPET_ID}__track-copy`
-  const SCROLL_BEHAVIOURS = new Set(['static', 'sticky', 'show_on_scroll_up'])
-  const SCROLL_HIDE_THRESHOLD_PX = 16
+  const VALID_OBJECT_FITS = new Set(['cover', 'contain', 'fill', 'none'])
 
   /**
    * Compute the marquee animation duration. `tickerSeconds` is "seconds for
@@ -62,17 +59,6 @@
     if (!Number.isFinite(copyWidth) || copyWidth <= 0) return null
     if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) return null
     return tickerSeconds * (copyWidth / viewportWidth)
-  }
-
-  /**
-   * Pure helper for the show-on-scroll-up behaviour. Returns 'down' when the
-   * user has scrolled past `lastY + threshold`, 'up' when scrolled before
-   * `lastY - threshold`, or null when within the dead-zone.
-   */
-  function extractScrollDirection(currentY, lastY, threshold) {
-    if (currentY > lastY + threshold) return 'down'
-    if (currentY < lastY - threshold) return 'up'
-    return null
   }
 
   function readBoolAttr(node, name, fallback) {
@@ -105,21 +91,9 @@
     }
 
     if (
-      typeof content.scroll_behaviour === 'string' &&
-      SCROLL_BEHAVIOURS.has(content.scroll_behaviour)
+      typeof content.asset_object_fit === 'string' &&
+      VALID_OBJECT_FITS.has(content.asset_object_fit)
     ) {
-      root.setAttribute('data-scroll-behaviour', content.scroll_behaviour)
-      root.classList.remove(`sai-${SNIPPET_ID}--scroll-static`)
-      root.classList.remove(`sai-${SNIPPET_ID}--scroll-sticky`)
-      root.classList.remove(`sai-${SNIPPET_ID}--scroll-show-up`)
-      const cls =
-        content.scroll_behaviour === 'show_on_scroll_up'
-          ? `sai-${SNIPPET_ID}--scroll-show-up`
-          : `sai-${SNIPPET_ID}--scroll-${content.scroll_behaviour}`
-      root.classList.add(cls)
-    }
-
-    if (typeof content.asset_object_fit === 'string') {
       const assets = node.querySelectorAll(`.sai-${SNIPPET_ID}__asset`)
       for (const a of assets) a.setAttribute('data-object-fit', content.asset_object_fit)
     }
@@ -135,20 +109,19 @@
     }
   }
 
-  if (typeof globalThis !== 'undefined' && globalThis.__SAI_TEST_HARNESS__ === true) {
+  if (globalThis.__SAI_TEST_HARNESS__ === true) {
     globalThis.__saiJrva2hec = {
       applyVariant,
       computeDuration,
-      extractScrollDirection,
       readBoolAttr,
       readNumberAttr,
     }
   }
 
   /**
-   * Set up one container's runtime: animation duration, scroll-behaviour
-   * effects, pause-on-focus/touch, body-padding compensation, click
-   * analytics. Returns a teardown function.
+   * Set up one container's runtime: animation duration,
+   * pause-on-focus/touch, click and view analytics. Returns a teardown
+   * function.
    */
   function activateContainer(node, snippetApi) {
     const root = node.querySelector(ROOT_SELECTOR)
@@ -157,11 +130,10 @@
     const firstCopy = node.querySelector(COPY_SELECTOR)
     if (!root || !track || !viewport || !firstCopy) return () => {}
 
-    // pauseOnHover and scrollBehaviour are captured once at init — see the
-    // module docstring for the runtime-mutation contract. tickerSeconds is
-    // re-read live inside setDuration so applyVariant can update speed.
+    // pauseOnHover is captured once at init — flipping it via applyVariant
+    // updates the data attribute (CSS hover-pause responds live) but does
+    // not add or remove the focus / touch listeners.
     const pauseOnHover = readBoolAttr(root, 'data-pause-on-hover', true)
-    const scrollBehaviour = root.getAttribute('data-scroll-behaviour') || 'static'
 
     const reducedMotion =
       typeof window.matchMedia === 'function'
@@ -174,35 +146,28 @@
 
     // When the natural slide content is shorter than the viewport, the
     // duplicate-track marquee would scroll empty space between cycles.
-    // Clone slides inside each copy until the copy is at least as wide as
-    // the viewport, so the -50% translate always lands the next copy in
-    // exactly the same position.
+    // Clone the snapshot of original children additively (1× per iteration)
+    // until the copy is at least as wide as the viewport. Snapshotting
+    // ONCE up-front matters: re-reading copy.children each iteration grows
+    // the clone count exponentially (2, 4, 8 …) and a single zero-width
+    // child would lock the page at 2^32 clones before the safety cap.
     function fillCopiesToViewport() {
       const viewportWidth = viewport_.getBoundingClientRect().width
       if (!viewportWidth) return
       const copies = node.querySelectorAll(COPY_SELECTOR)
       for (const copy of copies) {
-        // Cap the loop at 32 iterations as a safety net against pathological
-        // inputs (e.g. zero-width slides). 32 × even-modest content > any
-        // realistic viewport.
-        let safety = 32
-        // Snapshot the originals before any cloning — only the originals are
-        // real slides; everything cloned is a visual duplicate and must be
-        // hidden from AT + the tab order to satisfy WCAG 2.4.3 / 4.1.2.
         const originals = Array.from(copy.children)
         if (originals.length === 0) continue
+        let safety = 32
         while (copy.getBoundingClientRect().width < viewportWidth && safety-- > 0) {
+          const widthBefore = copy.getBoundingClientRect().width
           for (const child of originals) {
-            const clone = child.cloneNode(true)
-            // Mark clones so analytics dedupe slide_view by data-slide-index
-            // doesn't double-count.
-            clone.setAttribute('data-cloned', 'true')
-            // Take clones out of the accessibility tree AND the tab order —
-            // tabbing through a marquee shouldn't visit the same link twice.
-            clone.setAttribute('aria-hidden', 'true')
-            clone.setAttribute('inert', '')
-            copy.appendChild(clone)
+            copy.appendChild(child.cloneNode(true))
           }
+          // If a full pass over the original children didn't widen the
+          // copy at all, the children render at zero width — bail rather
+          // than burn the remaining safety budget on no-op appends.
+          if (copy.getBoundingClientRect().width <= widthBefore) break
         }
       }
     }
@@ -272,7 +237,14 @@
       fireAnalytics('announcement_bar:pause', { reason })
     }
     function resume(reason) {
-      track_.style.animationPlayState = 'running'
+      // Clear the inline property rather than setting 'running'. The CSS
+      // `:hover` rule has no `!important`, so an inline `running` would
+      // permanently outrank it — once a keyboard or touch interaction
+      // routed through resume(), hover-pause would stop working for the
+      // rest of the page lifetime. Removing the inline property hands
+      // control back to CSS (which handles both hover-pause and the
+      // data-ready running state).
+      track_.style.removeProperty('animation-play-state')
       fireAnalytics('announcement_bar:resume', { reason })
     }
 
@@ -292,56 +264,6 @@
         ['touchstart', onTouchStart],
         ['touchend', onTouchEnd],
       )
-    }
-
-    let scrollHandlerCleanup = () => {}
-    let bodyPaddingCleanup = () => {}
-
-    if (scrollBehaviour === 'sticky' || scrollBehaviour === 'show_on_scroll_up') {
-      // Push page content down so the bar doesn't overlap the header.
-      function syncBodyVar() {
-        const h = root.getBoundingClientRect().height
-        document.body.style.setProperty('--sai-announcement-bar-height', `${h}px`)
-      }
-      syncBodyVar()
-      let bodyResizeObserver = null
-      if (typeof ResizeObserver !== 'undefined') {
-        bodyResizeObserver = new ResizeObserver(syncBodyVar)
-        bodyResizeObserver.observe(root)
-      } else {
-        window.addEventListener('resize', syncBodyVar)
-      }
-      bodyPaddingCleanup = () => {
-        if (bodyResizeObserver) bodyResizeObserver.disconnect()
-        else window.removeEventListener('resize', syncBodyVar)
-        document.body.style.removeProperty('--sai-announcement-bar-height')
-      }
-    }
-
-    if (scrollBehaviour === 'show_on_scroll_up') {
-      let lastY = window.scrollY || 0
-      let raf = 0
-      const hiddenClass = `sai-${SNIPPET_ID}--hidden`
-      const onScroll = () => {
-        if (raf) return
-        raf = requestAnimationFrame(() => {
-          raf = 0
-          const currentY = window.scrollY || 0
-          const direction = extractScrollDirection(currentY, lastY, SCROLL_HIDE_THRESHOLD_PX)
-          if (direction === 'down' && currentY > SCROLL_HIDE_THRESHOLD_PX) {
-            root.classList.add(hiddenClass)
-            lastY = currentY
-          } else if (direction === 'up') {
-            root.classList.remove(hiddenClass)
-            lastY = currentY
-          }
-        })
-      }
-      window.addEventListener('scroll', onScroll, { passive: true })
-      scrollHandlerCleanup = () => {
-        window.removeEventListener('scroll', onScroll)
-        if (raf) cancelAnimationFrame(raf)
-      }
     }
 
     // Click analytics — delegate on the container so newly-rendered slides
@@ -392,8 +314,6 @@
       }
       for (const [evt, fn] of focusListeners) node.removeEventListener(evt, fn)
       node.removeEventListener('click', onClick)
-      scrollHandlerCleanup()
-      bodyPaddingCleanup()
       if (intersectionObserver) intersectionObserver.disconnect()
     }
 

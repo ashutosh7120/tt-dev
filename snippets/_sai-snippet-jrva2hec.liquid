@@ -8,12 +8,16 @@
     - mutation_handle    : 'mut-{instanceId}' (consumed by wrapper outer div)
     - experience_handle  : (consumed by wrapper outer div)
 
+  Positioning is intentionally NOT a snippet concern. The bar renders in
+  normal document flow at full viewport width. The section / template that
+  places the snippet decides whether to wrap it in a sticky / fixed
+  container; the snippet itself only knows how to scroll its slides.
+
   variant.content fields:
     - ticker_seconds     number   Seconds for one viewport-width of slide
                                   content to scroll past. Pixel speed stays
                                   constant regardless of total slide count.
     - pause_on_hover     boolean  Pause animation while hover/focus is active.
-    - scroll_behaviour   string   'static' | 'sticky' | 'show_on_scroll_up'
     - asset_object_fit   string   'cover' | 'contain' | 'fill' | 'none'
     - asset_loop         boolean  Maps to <video loop>; no-op for <img>.
     - slides             array    [{ title_text, asset_url, asset_position,
@@ -71,22 +75,6 @@
 {%- endif -%}
 
 {%- assign ticker_seconds = content.ticker_seconds | default: 30 -%}
-{%- assign scroll_behaviour = content.scroll_behaviour | default: 'static' -%}
-{%- if scroll_behaviour != 'static' and scroll_behaviour != 'sticky' and scroll_behaviour != 'show_on_scroll_up' -%}
-  {%- assign scroll_behaviour = 'static' -%}
-{%- endif -%}
-
-{%- comment -%}
-  Map the prop value to the CSS class suffix. CSS uses `--scroll-show-up`
-  (hyphenated) and the JS `applyVariant` adds the same hyphenated form;
-  emitting the raw underscored value here would yield a class with no
-  matching CSS rule and the bar would render unpositioned on initial load.
-{%- endcomment -%}
-{%- assign scroll_class = scroll_behaviour -%}
-{%- if scroll_behaviour == 'show_on_scroll_up' -%}
-  {%- assign scroll_class = 'show-up' -%}
-{%- endif -%}
-
 {%- assign asset_object_fit = content.asset_object_fit | default: 'cover' -%}
 {%- if asset_object_fit != 'cover' and asset_object_fit != 'contain' and asset_object_fit != 'fill' and asset_object_fit != 'none' -%}
   {%- assign asset_object_fit = 'cover' -%}
@@ -105,7 +93,21 @@
   → 1 repeat. Same target either way.
 {%- endcomment -%}
 {%- assign ssr_target_slides = 8 -%}
-{%- assign ssr_source_count = content.slides.size | default: 1 -%}
+{%- comment -%}
+  Count non-empty slides only. `content.slides.size` would inflate the
+  divisor with skipped (empty asset_url AND empty title_text) slides,
+  shrinking ssr_repeats below what the visible-slide count actually needs.
+{%- endcomment -%}
+{%- assign ssr_source_count = 0 -%}
+{%- if content.slides -%}
+  {%- for _slide_pre in content.slides -%}
+    {%- assign _pre_asset = _slide_pre.asset_url | default: '' -%}
+    {%- assign _pre_title = _slide_pre.title_text | default: '' -%}
+    {%- if _pre_asset != '' or _pre_title != '' -%}
+      {%- assign ssr_source_count = ssr_source_count | plus: 1 -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
 {%- if ssr_source_count < 1 -%}
   {%- assign ssr_source_count = 1 -%}
 {%- endif -%}
@@ -153,25 +155,29 @@
 
       {%- comment -%}
         Drop unsafe URL schemes from `redirect_url`. Anything not http(s),
-        mailto, tel, or relative is replaced with a no-op fragment so a
-        malicious or accidental `javascript:` value can't become a click
-        XSS vector. The check is on the literal scheme prefix (text before
-        the first `:`); relative URLs have no colon and pass through. The
-        `redirect_p2 != '//'` guard rejects protocol-relative URLs like
-        `//evil.com` which browsers resolve to the page's protocol and
-        would silently navigate visitors off-site.
+        mailto, tel, or relative is replaced with a no-op so a malicious or
+        accidental `javascript:` value can't become a click XSS vector.
+
+        Scheme detection only looks at the prefix BEFORE the first `/`,
+        `?`, or `#`. This correctly classifies:
+          /products/widget?utm=site:foo   → no colon in prefix → relative ✓
+          https://example.com/x:y         → 'https:' prefix    → http(s) ✓
+          mailto:hi@example.com           → 'mailto:' prefix   → allowed ✓
+          javascript:alert(1)             → 'javascript:'      → blocked ✓
+        A bare `split: ':' | first` would misread the first case as a scheme.
       {%- endcomment -%}
       {%- assign redirect_safe = '' -%}
       {%- if slide.redirect_url != blank -%}
         {%- assign redirect_lower = slide.redirect_url | strip | downcase -%}
-        {%- assign redirect_scheme = redirect_lower | split: ':' | first -%}
-        {%- assign redirect_p2 = redirect_lower | slice: 0, 2 -%}
-        {%- if redirect_p2 != '//' -%}
-          {%- if redirect_lower == redirect_scheme -%}
-            {%- assign redirect_safe = slide.redirect_url -%}
-          {%- elsif redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
+        {%- assign redirect_prefix = redirect_lower | split: '/' | first | split: '?' | first | split: '#' | first -%}
+        {%- if redirect_prefix contains ':' -%}
+          {%- assign redirect_scheme = redirect_prefix | split: ':' | first -%}
+          {%- if redirect_scheme == 'http' or redirect_scheme == 'https' or redirect_scheme == 'mailto' or redirect_scheme == 'tel' -%}
             {%- assign redirect_safe = slide.redirect_url -%}
           {%- endif -%}
+        {%- else -%}
+          {%- comment -%} No scheme in the prefix → relative URL, allowed. {%- endcomment -%}
+          {%- assign redirect_safe = slide.redirect_url -%}
         {%- endif -%}
       {%- endif -%}
 
@@ -211,7 +217,7 @@
                  fetchpriority="high"
                  decoding="async"
                  data-object-fit="{{ asset_object_fit }}"
-                 alt="{{ title_text | strip_html | truncate: 80 | escape }}">
+                 alt="{{ title_text | strip_html | escape | truncate: 80 }}">
           {%- endif -%}
         {%- endif -%}
         <span class="sai-jrva2hec__title">{{ title_text }}</span>
@@ -223,10 +229,9 @@
 
 {%- if rendered_count > 0 -%}
 <sai-jrva2hec
-  class="sai-jrva2hec sai-jrva2hec--scroll-{{ scroll_class }}"
+  class="sai-jrva2hec"
   data-ticker-seconds="{{ ticker_seconds }}"
   data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}"
-  data-scroll-behaviour="{{ scroll_behaviour }}"
   data-rendered-count="{{ rendered_count }}"
   aria-roledescription="ticker"
   aria-label="Announcement bar"
@@ -234,15 +239,7 @@
   <div class="sai-jrva2hec__viewport">
     <div class="sai-jrva2hec__track" data-pause-on-hover="{% if pause_on_hover %}true{% else %}false{% endif %}">
       <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
-      {%- comment -%}
-        Visual duplicate for the marquee loop. `aria-hidden` alone doesn't
-        take the inner <a>s out of the tab order — `inert` (HTML 5.2+) does
-        both: hides from AT AND removes from sequential focus navigation.
-        Keyboard users would otherwise hit every link twice. Falls back to
-        the same semantics on browsers that ignore inert because aria-hidden
-        is still set (WCAG 2.4.3 / 4.1.2).
-      {%- endcomment -%}
-      <div class="sai-jrva2hec__track-copy" aria-hidden="true" inert>{{ slides_html }}</div>
+      <div class="sai-jrva2hec__track-copy" aria-hidden="true">{{ slides_html }}</div>
     </div>
   </div>
 </sai-jrva2hec>
