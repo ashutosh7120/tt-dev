@@ -436,7 +436,7 @@
       }
       // Toast lives in document.body — must be explicitly removed; the
       // AbortController teardown doesn't reach it.
-      if (this._toast && this._toast.isConnected) {
+      if (this._toast?.isConnected) {
         this._toast.remove()
       }
       this._toast = null
