@@ -135,6 +135,17 @@
   z-index: 1;
 }
 
+/* Push modes use keyframe animations for transform; the base slide's
+ * `transition: opacity` would otherwise fade the entering slide from
+ * hidden→entering (opacity 0→1) for the same duration as the push,
+ * producing a visible flash above the slide because the slide background
+ * is briefly translucent while the slide is sliding into place. Push
+ * needs instant visibility — strip the transition for both push modes. */
+.sai-tl3uqxjd--transition-slide_push_horizontal .sai-tl3uqxjd__slide,
+.sai-tl3uqxjd--transition-slide_push_vertical .sai-tl3uqxjd__slide {
+  transition: none;
+}
+
 /* Horizontal slide-push */
 .sai-tl3uqxjd--transition-slide_push_horizontal .sai-tl3uqxjd__slide[data-state="entering"] {
   animation: sai-tl3uqxjd-h-in var(--sai-tl3uqxjd-transition-duration, 400ms) ease forwards;
@@ -278,11 +289,6 @@
   justify-content: center;
   text-align: center;
   min-width: 0;
-}
-
-.sai-tl3uqxjd__slide--has-asset.sai-tl3uqxjd__slide--has-titles.sai-tl3uqxjd__slide--has-actions
-  .sai-tl3uqxjd__zone-titles {
-  flex: 1 1 auto;
 }
 
 .sai-tl3uqxjd__zone-actions {
@@ -478,17 +484,13 @@
 /* ───────── Toast (rendered by JS for promo-copied feedback) ───────── */
 
 /* Standard snackbar-style toast: fixed at the bottom-center of the
- * viewport, NOT inside the host. Reasons:
- *   - Host has `overflow: hidden` to clip rail transitions; an in-host
- *     toast positioned above/below the host gets clipped invisible.
- *   - In `scroll_behaviour: show_on_scroll_up` mode the host itself
- *     carries `transform: translateY(...)`, which creates a containing
- *     block for fixed-positioned descendants — even `position: fixed`
- *     on an in-host toast would be confined to the host's bbox.
+ * viewport, NOT inside the host. Host has `overflow: hidden` to clip
+ * rail transitions; an in-host toast positioned above/below the host
+ * gets clipped invisible.
  *
  * JS reparents the element to `document.body` (see `_showToast`) so it
- * escapes both constraints. The element keeps its `sai-tl3uqxjd__toast`
- * class so the snippet-library aggregate CSS still styles it. */
+ * escapes the clip. The element keeps its `sai-tl3uqxjd__toast` class
+ * so the snippet-library aggregate CSS still styles it. */
 .sai-tl3uqxjd__toast {
   position: fixed;
   bottom: 24px;
@@ -531,30 +533,4 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-/* ───────── Scroll behaviour modifiers ───────── */
-
-.sai-tl3uqxjd--scroll-static {
-  position: relative;
-}
-
-.sai-tl3uqxjd--scroll-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.sai-tl3uqxjd--scroll-show_on_scroll_up {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  transform: translateY(-100%);
-  transition: transform 200ms ease;
-}
-
-.sai-tl3uqxjd--scroll-show_on_scroll_up.sai-tl3uqxjd--visible {
-  transform: translateY(0);
 }
