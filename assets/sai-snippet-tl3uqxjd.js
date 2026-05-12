@@ -346,8 +346,14 @@
       this._wireSlideViewObserver()
 
       const spectrumAi = window.__spectrumAi
+      // `bind(node)` looks for `:scope > script[data-spectrum-envelope]` —
+      // the SSR envelope script lives on the Studio WRAPPER (the
+      // `[data-spectrum-instance-id]` div), not inside this custom element.
+      // Passing `this` returns no-op handles silently (envelope = null);
+      // the wrapper is the right container.
+      const bindNode = this.closest('[data-spectrum-instance-id]') ?? this
       if (spectrumAi?.snippet && typeof spectrumAi.snippet.bind === 'function') {
-        const handle = spectrumAi.snippet.bind(this, ({ variants, currentVariantId }) => {
+        const handle = spectrumAi.snippet.bind(bindNode, ({ variants, currentVariantId }) => {
           // Boundary with third-party SDK code — wrap in try/catch so a
           // malformed payload (variants shape drift, etc.) doesn't propagate
           // up through bind's dispatch and break everything else on the page.
