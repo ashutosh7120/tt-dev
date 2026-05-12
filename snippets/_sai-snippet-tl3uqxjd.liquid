@@ -18,7 +18,6 @@
     - transition_duration_ms number  Animation duration in ms (100..2000).
     - swipe_enabled          boolean Touch-gesture navigation, axis follows transition_type.
     - dismissable            boolean Show top-right close button; dismissal persists in sessionStorage keyed by bar-version.
-    - scroll_behaviour       string  'static' | 'sticky' | 'show_on_scroll_up'
     - asset_object_fit       string  'cover' | 'contain' | 'fill' | 'none'
     - asset_loop             boolean Maps to <video loop>; no-op for <img>.
     - promo_copied_text      string  Inline / toast feedback text for promo CTAs.
@@ -123,11 +122,6 @@
 {%- assign transition_duration_ms = content.transition_duration_ms | default: 400 | times: 1 -%}
 {%- if transition_duration_ms < 100 -%}{%- assign transition_duration_ms = 100 -%}{%- endif -%}
 {%- if transition_duration_ms > 2000 -%}{%- assign transition_duration_ms = 2000 -%}{%- endif -%}
-
-{%- assign scroll_behaviour = content.scroll_behaviour | default: 'static' -%}
-{%- if scroll_behaviour != 'static' and scroll_behaviour != 'sticky' and scroll_behaviour != 'show_on_scroll_up' -%}
-  {%- assign scroll_behaviour = 'static' -%}
-{%- endif -%}
 
 {%- assign max_width = content.max_width | default: 0 | times: 1 -%}
 {%- if max_width < 0 -%}{%- assign max_width = 0 -%}{%- endif -%}
@@ -387,9 +381,19 @@
         {%- if asset_url_safe != '' -%}
           <div class="sai-tl3uqxjd__zone-asset">
             {%- if is_video -%}
+              {%- comment -%}
+                preload="none" + no autoplay at SSR: JS flips preload to
+                "auto" and calls play() only on the current slide (and
+                pauses + restores "none" on the rest in _setVideoPlayState).
+                A carousel with 18 slides * autoplay would otherwise warm
+                up 18 video buffers above the fold and tank LCP on slow
+                connections; this contains the cost to one buffer at a
+                time. `muted playsinline` keep autoplay-policy compliance
+                for the JS-driven .play() call.
+              {%- endcomment -%}
               <video class="sai-tl3uqxjd__asset"
                      src="{{ asset_url_safe | escape }}"
-                     autoplay muted playsinline
+                     preload="none" muted playsinline
                      {%- if asset_loop %} loop{% endif %}
                      data-object-fit="{{ asset_object_fit | escape }}"></video>
             {%- else -%}
@@ -468,14 +472,13 @@
   {%- assign bar_version = content.slides | json | sha256 -%}
 
 <sai-tl3uqxjd
-  class="sai-tl3uqxjd sai-tl3uqxjd--scroll-{{ scroll_behaviour }}{% if single_slide %} sai-tl3uqxjd--single{% endif %} sai-tl3uqxjd--transition-{{ transition_type }}"
+  class="sai-tl3uqxjd{% if single_slide %} sai-tl3uqxjd--single{% endif %} sai-tl3uqxjd--transition-{{ transition_type }}"
   data-auto-rotate="{% if auto_rotate %}true{% else %}false{% endif %}"
   data-rotation-seconds="{{ rotation_seconds }}"
   data-transition-type="{{ transition_type | escape }}"
   data-transition-duration-ms="{{ transition_duration_ms }}"
   data-swipe-enabled="{% if swipe_enabled %}true{% else %}false{% endif %}"
   data-dismissable="{% if dismissable %}true{% else %}false{% endif %}"
-  data-scroll-behaviour="{{ scroll_behaviour | escape }}"
   data-max-width="{{ max_width }}"
   data-max-height="{{ max_height }}"
   data-asset-object-fit="{{ asset_object_fit | escape }}"
