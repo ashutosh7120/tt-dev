@@ -26,7 +26,7 @@
   /* ────────── Pure helpers ────────── */
 
   /**
-   * URL allowlist matching the Liquid-side check (amendment B). Accepts
+   * URL allowlist matching the Liquid-side check. Accepts
    * absolute / and the http(s):, mailto:, tel: schemes. Anything else
    * including javascript:, data:, vbscript: returns null. The `//`
    * leading-pair check rejects protocol-relative URLs (`//evil.com`)
@@ -101,15 +101,12 @@
 
   function applyVariant(host, content) {
     if (content == null || typeof content !== 'object') return
-    let rotationChanged = false
     if (typeof content.auto_rotate === 'boolean') {
       host.setAttribute('data-auto-rotate', content.auto_rotate ? 'true' : 'false')
-      rotationChanged = true
     }
     if (typeof content.rotation_seconds === 'number') {
       const seconds = clampNumber(content.rotation_seconds, 3, 60, 5)
       host.setAttribute('data-rotation-seconds', String(seconds))
-      rotationChanged = true
     }
     if (
       typeof content.transition_type === 'string' &&
@@ -447,7 +444,11 @@
       this._toast = null
       this._pauseAllVideos()
       // Reset transient state so a future re-init (HMR / Studio iframe
-      // reload) doesn't read leftover values.
+      // reload, or the SAME element being detached and re-attached via
+      // a DOM move) doesn't read leftover values. Clearing data-sai-init
+      // is what lets reconnect's early-return guard fall through; without
+      // it a moved element would re-attach as a no-op shell.
+      this.removeAttribute('data-sai-init')
       this._slides = []
       this._currentIndex = 0
       this._transitioning = false
@@ -494,7 +495,7 @@
       }
     }
 
-    /* ────────── Video play discipline (amendment 7) ────────── */
+    /* ────────── Video play discipline ────────── */
 
     _setVideoPlayState() {
       for (const slide of this._slides) {
@@ -917,7 +918,7 @@
       })
     }
 
-    /* ────────── Swipe (axis-dominance gate, amendment 6) ────────── */
+    /* ────────── Swipe (axis-dominance gate) ────────── */
 
     _wireSwipe(signal) {
       const isVertical = this.getAttribute('data-transition-type') === 'slide_push_vertical'

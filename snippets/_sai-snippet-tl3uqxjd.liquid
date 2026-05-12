@@ -268,7 +268,6 @@
 
       {%- assign current_index = rendered_count -%}
       {%- assign rendered_count = rendered_count | plus: 1 -%}
-      {%- assign slide_id = 'sai-tl3uqxjd-slide-' | append: current_index -%}
 
       {%- assign initial_state = 'hidden' -%}
       {%- if current_index == 0 -%}
@@ -352,9 +351,16 @@
         {%- assign aria_label = title_2 | strip_html | truncate: 80 | escape -%}
       {%- endif -%}
 
+      {%- comment -%}
+        Slide id is intentionally omitted — nothing in the JS, CSS, or
+        aria wiring references it, and a static `id` collides when the
+        same snippet is dropped multiple times on a single page (each
+        instance would emit `sai-tl3uqxjd-slide-0`, breaking HTML
+        validity). Use `data-slide-index` + `:scope`-scoped selectors
+        inside the host for any positional lookup.
+      {%- endcomment -%}
       {%- if has_cta -%}
-        <div id="{{ slide_id }}"
-             class="sai-tl3uqxjd__slide{{ mod_class }}"
+        <div class="sai-tl3uqxjd__slide{{ mod_class }}"
              role="group"
              aria-roledescription="slide"
              aria-label="Slide {{ rendered_count }}"
@@ -365,8 +371,7 @@
              {%- if initial_state == 'hidden' %} inert{% endif %}
              style="--sai-slide-bg: {{ slide_bg | escape }};">
       {%- else -%}
-        <a id="{{ slide_id }}"
-           class="sai-tl3uqxjd__slide{{ mod_class }}"
+        <a class="sai-tl3uqxjd__slide{{ mod_class }}"
            role="group"
            aria-roledescription="slide"
            aria-label="Slide {{ rendered_count }}"
