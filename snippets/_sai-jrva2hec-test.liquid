@@ -74,10 +74,8 @@
   </a>
 {%- endcapture -%}
 
-<div data-spectrum-instance-id="local-test-jrva2hec-{{ 'now' | date: '%s' }}"
-     data-spectrum-snippet-id="jrva2hec"
-     style="display:block !important;visibility:visible;opacity:1;width:100%;position:relative;z-index:1000;">
-  <sai-jrva2hec class="sai-jrva2hec" data-ticker-seconds="30" data-pause-on-hover="true" data-rendered-count="14" aria-roledescription="ticker" aria-label="Announcement bar">
+<div class="sai-jrva2hec-test-host" style="display:block !important;visibility:visible;opacity:1;width:100%;position:relative;z-index:1000;">
+  <sai-jrva2hec class="sai-jrva2hec" data-ticker-seconds="30" data-pause-on-hover="true" data-rendered-count="14" data-ready="true" aria-roledescription="ticker" aria-label="Announcement bar">
     <div class="sai-jrva2hec__viewport">
       <div class="sai-jrva2hec__track" data-pause-on-hover="true">
         <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
@@ -86,5 +84,3 @@
     </div>
   </sai-jrva2hec>
 </div>
-
-<script src="{{ 'sai-snippet-jrva2hec.js' | asset_url }}" async></script>
