@@ -1,0 +1,86 @@
+{%- comment -%}
+  Local-only test wrapper for the announcement-bar-ticker snippet (jrva2hec).
+  Mirrors what Studio's "section: header, position: above" install would
+  produce: a snippet rendered from inside sections/header.liquid, so the
+  bar lives inside the same .shopify-section.header-section wrapper as
+  <header-component> and inherits the theme's sticky-header behavior.
+
+  Hardcodes 14 slides covering every snippet variation:
+    asset types  : image, gif, mp4, webm
+    positions    : leading, trailing, background
+    redirects    : relative, absolute https, mailto, tel, blocked scheme, none
+    edge cases   : text-only slide, rich HTML title with em + strong + long copy
+
+  Class names + data attributes mirror the library snippet's SSR output so
+  the existing aggregate CSS + sai-snippet-jrva2hec.js pick this up without
+  any further changes.
+{%- endcomment -%}
+
+{%- capture slides_html -%}
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="0" href="/collections/all" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-img-leading/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="FLAT 20% OFF SITEWIDE">
+    <span class="sai-jrva2hec__title"><strong>FLAT 20% OFF SITEWIDE</strong> &mdash; USE CODE SURPRISE20</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="1" href="/collections/new" style="--sai-slide-bg: #e5b842;">
+    <video class="sai-jrva2hec__asset" src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay muted playsinline loop preload="auto" data-object-fit="cover"></video>
+    <span class="sai-jrva2hec__title"><strong>WATCH THE NEW DROP</strong> in motion</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-trailing" data-slide-index="2" href="/collections/new" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-img-trailing/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="NEW ARRIVALS">
+    <span class="sai-jrva2hec__title"><strong>NEW ARRIVALS</strong> &mdash; shop the latest</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="3" href="/pages/gifts" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://media.giphy.com/media/3o7TKzGmEHfvJpYWGc/giphy.gif" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="LIMITED-TIME GIFT with every order">
+    <span class="sai-jrva2hec__title"><strong>LIMITED-TIME GIFT</strong> with every order</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="4" href="/collections/featured" style="--sai-slide-bg: #e5b842;">
+    <video class="sai-jrva2hec__asset" src="https://test-videos.co.uk/vids/bigbuckbunny/webm/vp9/360/Big_Buck_Bunny_360_10s_1MB.webm" autoplay muted playsinline loop preload="auto" data-object-fit="cover"></video>
+    <span class="sai-jrva2hec__title">Featured collection</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-background" data-slide-index="5" href="/pages/shipping" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-bg-img/800/80" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="WORLDWIDE SHIPPING">
+    <span class="sai-jrva2hec__title"><strong>WORLDWIDE SHIPPING</strong></span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-background" data-slide-index="6" href="/collections/winter" style="--sai-slide-bg: #e5b842;">
+    <video class="sai-jrva2hec__asset" src="https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4" autoplay muted playsinline loop preload="auto" data-object-fit="cover"></video>
+    <span class="sai-jrva2hec__title"><strong>WINTER SALE</strong> &mdash; up to 50% off</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="7" href="mailto:hello@example.com" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-mailto/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="Questions? Email us">
+    <span class="sai-jrva2hec__title">Questions? <strong>Email us</strong></span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="8" href="tel:+15551234567" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-tel/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="Call us">
+    <span class="sai-jrva2hec__title">Call us: <strong>+1 (555) 123-4567</strong></span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="9" href="https://example.com" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-ext/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="Read our brand story">
+    <span class="sai-jrva2hec__title">Read our <strong>brand story</strong> &rarr;</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="10" aria-disabled="true" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-blocked/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="BLOCKED-SCHEME TEST">
+    <span class="sai-jrva2hec__title"><strong>BLOCKED-SCHEME TEST</strong> (no href, no click)</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="11" aria-disabled="true" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-nolink/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="NO LINK">
+    <span class="sai-jrva2hec__title"><strong>NO LINK</strong> &mdash; aria-disabled slide</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="12" href="/pages/announcements" style="--sai-slide-bg: #e5b842;">
+    <span class="sai-jrva2hec__title"><strong>TEXT-ONLY SLIDE</strong> &mdash; no asset URL provided</span>
+  </a>
+  <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-leading" data-slide-index="13" href="/pages/membership" style="--sai-slide-bg: #e5b842;">
+    <img class="sai-jrva2hec__asset" src="https://picsum.photos/seed/sai-long/120/60" loading="eager" fetchpriority="high" decoding="async" data-object-fit="cover" alt="Sign up for exclusive drops">
+    <span class="sai-jrva2hec__title">Sign up for <em>exclusive</em> drops and early access &mdash; <strong>members save more</strong>. Long-title test to verify the marquee handles wide slides without wrapping or breaking the loop math.</span>
+  </a>
+{%- endcapture -%}
+
+<sai-jrva2hec class="sai-jrva2hec" data-ticker-seconds="30" data-pause-on-hover="true" data-rendered-count="14" aria-roledescription="ticker" aria-label="Announcement bar">
+  <div class="sai-jrva2hec__viewport">
+    <div class="sai-jrva2hec__track" data-pause-on-hover="true">
+      <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
+      <div class="sai-jrva2hec__track-copy" aria-hidden="true">{{ slides_html }}</div>
+    </div>
+  </div>
+</sai-jrva2hec>
+
+<script src="{{ 'sai-snippet-jrva2hec.js' | asset_url }}" async></script>

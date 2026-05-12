@@ -10,6 +10,17 @@
   SPECTRUM_AI_PREVIEW_DETECT:END
 {%- endcomment -%}
 
+{%- comment -%}
+  SPECTRUM_AI_SLOT:START handle=mut-jrva2hec-test
+  Local test placement — mirrors Studio "section: header, position: above" install.
+{%- endcomment -%}
+{%- unless request.design_mode -%}
+  {% render '_sai-jrva2hec-test' %}
+{%- endunless -%}
+{%- comment -%}
+  SPECTRUM_AI_SLOT:END handle=mut-jrva2hec-test
+{%- endcomment -%}
+
 {% liquid
   assign order = 'logo,menu,localization,search,drawer_search,actions'
 
