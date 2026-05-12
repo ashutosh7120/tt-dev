@@ -11,6 +11,173 @@
   "type": "header",
   "name": "Header",
   "sections": {
+    "sai_test_jrva2hec": {
+      "type": "sai-test-jrva2hec",
+      "blocks": {
+        "slide_01_img_leading": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>FLAT 20% OFF SITEWIDE</strong> &mdash; USE CODE SURPRISE20</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/all",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-img-leading/120/60"
+          }
+        },
+        "slide_02_mp4_leading": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>WATCH THE NEW DROP</strong> in motion</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/new",
+            "asset_position": "leading",
+            "asset_url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          }
+        },
+        "slide_03_img_trailing": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>NEW ARRIVALS</strong> &mdash; shop the latest</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/new",
+            "asset_position": "trailing",
+            "asset_url": "https://picsum.photos/seed/sai-img-trailing/120/60"
+          }
+        },
+        "slide_04_gif_leading": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>LIMITED-TIME GIFT</strong> with every order</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/pages/gifts",
+            "asset_position": "leading",
+            "asset_url": "https://media.giphy.com/media/3o7TKzGmEHfvJpYWGc/giphy.gif"
+          }
+        },
+        "slide_05_webm_leading": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p>Featured collection</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/featured",
+            "asset_position": "leading",
+            "asset_url": "https://test-videos.co.uk/vids/bigbuckbunny/webm/vp9/360/Big_Buck_Bunny_360_10s_1MB.webm"
+          }
+        },
+        "slide_06_img_background": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>WORLDWIDE SHIPPING</strong></p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/pages/shipping",
+            "asset_position": "background",
+            "asset_url": "https://picsum.photos/seed/sai-bg-img/800/80"
+          }
+        },
+        "slide_07_mp4_background": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>WINTER SALE</strong> &mdash; up to 50% off</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/winter",
+            "asset_position": "background",
+            "asset_url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4"
+          }
+        },
+        "slide_08_mailto": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p>Questions? <strong>Email us</strong></p>",
+            "background_color": "#e5b842",
+            "redirect_url": "mailto:hello@example.com",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-mailto/120/60"
+          }
+        },
+        "slide_09_tel": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p>Call us: <strong>+1 (555) 123-4567</strong></p>",
+            "background_color": "#e5b842",
+            "redirect_url": "tel:+15551234567",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-tel/120/60"
+          }
+        },
+        "slide_10_external_https": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p>Read our <strong>brand story</strong> &rarr;</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "https://example.com",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-ext/120/60"
+          }
+        },
+        "slide_11_blocked_scheme": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>BLOCKED-SCHEME TEST</strong> (no href, no click)</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "javascript:alert(1)",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-blocked/120/60"
+          }
+        },
+        "slide_12_no_redirect": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>NO LINK</strong> &mdash; aria-disabled slide</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-nolink/120/60"
+          }
+        },
+        "slide_13_text_only": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>TEXT-ONLY SLIDE</strong> &mdash; no asset URL provided</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/pages/announcements",
+            "asset_position": "leading",
+            "asset_url": ""
+          }
+        },
+        "slide_14_rich_html_long": {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p>Sign up for <em>exclusive</em> drops and early access &mdash; <strong>members save more</strong>. Long-title test to verify the marquee handles wide slides without wrapping or breaking the loop math.</p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/pages/membership",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-long/120/60"
+          }
+        }
+      },
+      "block_order": [
+        "slide_01_img_leading",
+        "slide_02_mp4_leading",
+        "slide_03_img_trailing",
+        "slide_04_gif_leading",
+        "slide_05_webm_leading",
+        "slide_06_img_background",
+        "slide_07_mp4_background",
+        "slide_08_mailto",
+        "slide_09_tel",
+        "slide_10_external_https",
+        "slide_11_blocked_scheme",
+        "slide_12_no_redirect",
+        "slide_13_text_only",
+        "slide_14_rich_html_long"
+      ],
+      "settings": {
+        "ticker_seconds": 30,
+        "pause_on_hover": true,
+        "asset_object_fit": "cover",
+        "asset_loop": true
+      }
+    },
     "header_section": {
       "type": "header",
       "blocks": {
@@ -82,6 +249,7 @@
     }
   },
   "order": [
+    "sai_test_jrva2hec",
     "header_section"
   ]
 }

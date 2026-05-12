@@ -1,0 +1,203 @@
+{%- comment -%}
+  Local-only test harness for the Announcement Bar Ticker snippet (jrva2hec).
+  Renders the bar's HTML structure inline using Shopify section blocks for
+  slide data. Iterate on snippet CSS / JS without going through Studio
+  publish, metaobjects, or Admin API.
+
+  Layout / asset render branch / class structure must stay in lockstep
+  with the actual snippet at packages/snippet-library/snippets/jrva2hec/.
+  This is a temporary test-only path; the production render goes through
+  Studio + the wrapper generator.
+
+  Positioning is intentionally the SECTION's concern, not the snippet's.
+  Currently renders in normal document flow above the theme header.
+{%- endcomment -%}
+
+{%- assign rendered_count = section.blocks.size -%}
+
+{%- capture slides_html -%}
+  {%- for block in section.blocks -%}
+    {%- assign asset_url = block.settings.asset_url | default: '' -%}
+    {%- assign title_text = block.settings.title_text | default: '' -%}
+
+    {%- assign asset_path = asset_url | split: '?' | first | split: '#' | first -%}
+    {%- assign asset_ext = asset_path | split: '.' | last | downcase -%}
+    {%- assign is_video = false -%}
+    {%- if asset_ext == 'mp4' or asset_ext == 'webm' or asset_ext == 'mov' -%}
+      {%- assign is_video = true -%}
+    {%- endif -%}
+
+    {%- assign asset_position = block.settings.asset_position | default: 'leading' -%}
+    {%- assign slide_bg = block.settings.background_color | default: 'transparent' -%}
+    {%- assign asset_object_fit = section.settings.asset_object_fit | default: 'cover' -%}
+    {%- assign asset_loop = section.settings.asset_loop -%}
+
+    <a class="sai-jrva2hec__slide sai-jrva2hec__slide--asset-{{ asset_position }}"
+       data-slide-index="{{ forloop.index0 }}"
+       {%- if block.settings.redirect_url != blank %} href="{{ block.settings.redirect_url | escape }}"{% else %} aria-disabled="true"{% endif %}
+       style="--sai-slide-bg: {{ slide_bg | escape }};">
+      {%- if asset_url != '' -%}
+        {%- if is_video -%}
+          <video class="sai-jrva2hec__asset"
+                 src="{{ asset_url | escape }}"
+                 autoplay muted playsinline preload="auto"
+                 {%- if asset_loop %} loop{% endif %}
+                 data-object-fit="{{ asset_object_fit }}"></video>
+        {%- else -%}
+          <img class="sai-jrva2hec__asset"
+               src="{{ asset_url | escape }}"
+               loading="eager"
+               fetchpriority="high"
+               decoding="async"
+               data-object-fit="{{ asset_object_fit }}"
+               alt="{{ title_text | strip_html | escape | truncate: 80 }}">
+        {%- endif -%}
+      {%- endif -%}
+      <span class="sai-jrva2hec__title">{{ title_text }}</span>
+    </a>
+  {%- endfor -%}
+{%- endcapture -%}
+
+{%- if rendered_count > 0 -%}
+<div data-spectrum-instance-id="test-{{ section.id }}"
+     data-spectrum-snippet-id="jrva2hec"
+     data-spectrum-experience="test-experience"
+     data-spectrum-feature-slug="announcement_bar">
+  <sai-jrva2hec
+    class="sai-jrva2hec"
+    data-ticker-seconds="{{ section.settings.ticker_seconds | default: 30 }}"
+    data-pause-on-hover="{% if section.settings.pause_on_hover %}true{% else %}false{% endif %}"
+    data-rendered-count="{{ rendered_count }}"
+    aria-roledescription="ticker"
+    aria-label="Announcement bar"
+  >
+    <div class="sai-jrva2hec__viewport">
+      <div class="sai-jrva2hec__track" data-pause-on-hover="{% if section.settings.pause_on_hover %}true{% else %}false{% endif %}">
+        <div class="sai-jrva2hec__track-copy" aria-hidden="false">{{ slides_html }}</div>
+        <div class="sai-jrva2hec__track-copy" aria-hidden="true">{{ slides_html }}</div>
+      </div>
+    </div>
+  </sai-jrva2hec>
+</div>
+
+{{ 'spectrum-snippet.css' | asset_url | stylesheet_tag }}
+
+<style>
+  .sai-jrva2hec__title {
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 0.8125rem;
+  }
+  .sai-jrva2hec__title strong { font-weight: 700; }
+</style>
+
+<script src="{{ 'sai-snippet-jrva2hec.js' | asset_url }}" async></script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "[TEST] Ann Bar Ticker",
+  "tag": "section",
+  "class": "sai-test-jrva2hec",
+  "settings": [
+    { "type": "header", "content": "Bar behaviour" },
+    {
+      "type": "number",
+      "id": "ticker_seconds",
+      "label": "Speed (seconds per viewport)",
+      "default": 30
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause on hover",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "asset_object_fit",
+      "label": "Asset object-fit",
+      "default": "cover",
+      "options": [
+        { "value": "cover", "label": "Cover" },
+        { "value": "contain", "label": "Contain" },
+        { "value": "fill", "label": "Fill" },
+        { "value": "none", "label": "None" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "asset_loop",
+      "label": "Loop video assets",
+      "default": true
+    }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "settings": [
+        {
+          "type": "richtext",
+          "id": "title_text",
+          "label": "Title (rich HTML)",
+          "default": "<p>Free shipping on orders over <strong>$50</strong></p>"
+        },
+        { "type": "text", "id": "redirect_url", "label": "Redirect URL", "info": "Accepts http(s)/mailto/tel/relative; other schemes are dropped by the snippet (renders aria-disabled)." },
+        {
+          "type": "color",
+          "id": "background_color",
+          "label": "Background colour",
+          "default": "#000000"
+        },
+        {
+          "type": "select",
+          "id": "asset_position",
+          "label": "Asset position",
+          "default": "leading",
+          "options": [
+            { "value": "leading", "label": "Before title" },
+            { "value": "trailing", "label": "After title" },
+            { "value": "background", "label": "Behind title" }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "asset_url",
+          "label": "Asset URL (image/GIF/video)",
+          "info": "Leave blank for text-only slide"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 20,
+  "presets": [
+    {
+      "name": "[TEST] Ann Bar Ticker",
+      "blocks": [
+        {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>FLAT 20% OFF SITEWIDE</strong></p>",
+            "background_color": "#e5b842",
+            "redirect_url": "/collections/all",
+            "asset_position": "leading",
+            "asset_url": "https://picsum.photos/seed/sai-1/120/60"
+          }
+        },
+        {
+          "type": "slide",
+          "settings": {
+            "title_text": "<p><strong>FREE SHIPPING OVER $50</strong></p>",
+            "background_color": "#1a3d6d",
+            "redirect_url": "/collections/all",
+            "asset_position": "leading",
+            "asset_url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -123,7 +123,7 @@
    * pause-on-focus/touch, click and view analytics. Returns a teardown
    * function.
    */
-  function activateContainer(node, snippetApi) {
+  function activateContainer(node) {
     const root = node.querySelector(ROOT_SELECTOR)
     const track = node.querySelector(TRACK_SELECTOR)
     const viewport = node.querySelector(VIEWPORT_SELECTOR)
@@ -140,10 +140,6 @@
         ? window.matchMedia('(prefers-reduced-motion: reduce)')
         : null
 
-    const track_ = track
-    const viewport_ = viewport
-    const firstCopy_ = firstCopy
-
     // When the natural slide content is shorter than the viewport, the
     // duplicate-track marquee would scroll empty space between cycles.
     // Clone the snapshot of original children additively (1× per iteration)
@@ -152,7 +148,7 @@
     // the clone count exponentially (2, 4, 8 …) and a single zero-width
     // child would lock the page at 2^32 clones before the safety cap.
     function fillCopiesToViewport() {
-      const viewportWidth = viewport_.getBoundingClientRect().width
+      const viewportWidth = viewport.getBoundingClientRect().width
       if (!viewportWidth) return
       const copies = node.querySelectorAll(COPY_SELECTOR)
       for (const copy of copies) {
@@ -178,11 +174,11 @@
       // Re-read each call so applyVariant's data-ticker-seconds update is
       // picked up without needing to thread state.
       const tickerSeconds = readNumberAttr(root, 'data-ticker-seconds', 30)
-      const copyWidth = firstCopy_.getBoundingClientRect().width
-      const viewportWidth = viewport_.getBoundingClientRect().width
+      const copyWidth = firstCopy.getBoundingClientRect().width
+      const viewportWidth = viewport.getBoundingClientRect().width
       const duration = computeDuration(tickerSeconds, copyWidth, viewportWidth)
       if (duration === null) return
-      track_.style.setProperty(`--sai-${SNIPPET_ID}-duration`, `${duration}s`)
+      track.style.setProperty(`--sai-${SNIPPET_ID}-duration`, `${duration}s`)
     }
 
     // On viewport widen (browser resize, mobile rotate, devtools toggle), an
@@ -204,15 +200,15 @@
     let resizeObserver = null
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(onResize)
-      resizeObserver.observe(firstCopy_)
-      resizeObserver.observe(viewport_)
+      resizeObserver.observe(firstCopy)
+      resizeObserver.observe(viewport)
     } else {
       window.addEventListener('resize', onResize)
     }
 
     const onMotionChange = () => {
       if (reducedMotion?.matches) {
-        track_.style.setProperty(`--sai-${SNIPPET_ID}-duration`, '0s')
+        track.style.setProperty(`--sai-${SNIPPET_ID}-duration`, '0s')
       } else {
         setDuration()
       }
@@ -233,7 +229,7 @@
     }
 
     function pause(reason) {
-      track_.style.animationPlayState = 'paused'
+      track.style.animationPlayState = 'paused'
       fireAnalytics('announcement_bar:pause', { reason })
     }
     function resume(reason) {
@@ -244,7 +240,7 @@
       // rest of the page lifetime. Removing the inline property hands
       // control back to CSS (which handles both hover-pause and the
       // data-ready running state).
-      track_.style.removeProperty('animation-play-state')
+      track.style.removeProperty('animation-play-state')
       fireAnalytics('announcement_bar:resume', { reason })
     }
 
@@ -300,9 +296,9 @@
             })
           }
         },
-        { threshold: [0, 0.5, 1], root: viewport_ },
+        { threshold: [0, 0.5, 1], root: viewport },
       )
-      const slidesToObserve = firstCopy_.querySelectorAll(`.sai-${SNIPPET_ID}__slide`)
+      const slidesToObserve = firstCopy.querySelectorAll(`.sai-${SNIPPET_ID}__slide`)
       for (const s of slidesToObserve) intersectionObserver.observe(s)
     }
 
@@ -330,7 +326,7 @@
   }
 
   function activate(node, snippetApi) {
-    const handle = activateContainer(node, snippetApi)
+    const handle = activateContainer(node)
     if (!handle || typeof handle.teardown !== 'function') return
 
     // Wire to the SDK if available; otherwise the bar runs without analytics

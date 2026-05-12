@@ -10,16 +10,6 @@
   SPECTRUM_AI_PREVIEW_DETECT:END
 {%- endcomment -%}
 
-{%- comment -%}
-  SPECTRUM_AI_SLOT:START handle=mut-o086xkkmgakndnkxxgeyh4cp
-{%- endcomment -%}
-{%- unless request.design_mode -%}
-  {% render '_sai-o086xkkmgakndnkxxgeyh4cp', sai_state: 'live' %}
-{%- endunless -%}
-{%- comment -%}
-  SPECTRUM_AI_SLOT:END handle=mut-o086xkkmgakndnkxxgeyh4cp
-{%- endcomment -%}
-
 {% liquid
   assign order = 'logo,menu,localization,search,drawer_search,actions'
 
